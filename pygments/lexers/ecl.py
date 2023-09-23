@@ -121,16 +121,16 @@ class ECLLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """This is very difficult to guess relative to other business languages.
         -> in conjunction with BEGIN/END seems relatively rare though."""
         result = 0
 
-        if '->' in text:
+        if '->' in self:
             result += 0.01
-        if 'BEGIN' in text:
+        if 'BEGIN' in self:
             result += 0.01
-        if 'END' in text:
+        if 'END' in self:
             result += 0.01
 
         return result

@@ -8,6 +8,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 import re
 
 from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, \
@@ -22,6 +23,8 @@ __all__ = ['HaskellLexer', 'HspecLexer', 'IdrisLexer', 'AgdaLexer', 'CryptolLexe
 
 
 line_re = re.compile('.*?\n')
+
+
 
 
 class HaskellLexer(RegexLexer):
@@ -46,87 +49,99 @@ class HaskellLexer(RegexLexer):
 
     tokens = {
         'root': [
-            # Whitespace:
             (r'\s+', Whitespace),
-            # (r'--\s*|.*$', Comment.Doc),
             (r'--(?![!#$%&*+./<=>?@^|_~:\\]).*?$', Comment.Single),
             (r'\{-', Comment.Multiline, 'comment'),
-            # Lexemes:
-            #  Identifiers
             (r'\bimport\b', Keyword.Reserved, 'import'),
             (r'\bmodule\b', Keyword.Reserved, 'module'),
             (r'\berror\b', Name.Exception),
             (r'\b(%s)(?!\')\b' % '|'.join(reserved), Keyword.Reserved),
-            (r"'[^\\]'", String.Char),  # this has to come before the TH quote
-            (r'^[_' + uni.Ll + r'][\w\']*', Name.Function),
-            (r"'?[_" + uni.Ll + r"][\w']*", Name),
-            (r"('')?[" + uni.Lu + r"][\w\']*", Keyword.Type),
-            (r"(')[" + uni.Lu + r"][\w\']*", Keyword.Type),
-            (r"(')\[[^\]]*\]", Keyword.Type),  # tuples and lists get special treatment in GHC
-            (r"(')\([^)]*\)", Keyword.Type),  # ..
-            (r"(')[:!#$%&*+.\\/<=>?@^|~-]+", Keyword.Type),  # promoted type operators
-            #  Operators
-            (r'\\(?![:!#$%&*+.\\/<=>?@^|~-]+)', Name.Function),  # lambda operator
-            (r'(<-|::|->|=>|=)(?![:!#$%&*+.\\/<=>?@^|~-]+)', Operator.Word),  # specials
-            (r':[:!#$%&*+.\\/<=>?@^|~-]*', Keyword.Type),  # Constructor operators
-            (r'[:!#$%&*+.\\/<=>?@^|~-]+', Operator),  # Other operators
-            #  Numbers
-            (r'0[xX]_*[\da-fA-F](_*[\da-fA-F])*_*[pP][+-]?\d(_*\d)*', Number.Float),
-            (r'0[xX]_*[\da-fA-F](_*[\da-fA-F])*\.[\da-fA-F](_*[\da-fA-F])*'
-             r'(_*[pP][+-]?\d(_*\d)*)?', Number.Float),
+            (r"'[^\\]'", String.Char),
+            (f'^[_{uni.Ll}' + r'][\w\']*', Name.Function),
+            (f"'?[_{uni.Ll}" + r"][\w']*", Name),
+            (f"('')?[{uni.Lu}" + r"][\w\']*", Keyword.Type),
+            (f"(')[{uni.Lu}" + r"][\w\']*", Keyword.Type),
+            (r"(')\[[^\]]*\]", Keyword.Type),
+            (r"(')\([^)]*\)", Keyword.Type),
+            (r"(')[:!#$%&*+.\\/<=>?@^|~-]+", Keyword.Type),
+            (r'\\(?![:!#$%&*+.\\/<=>?@^|~-]+)', Name.Function),
+            (r'(<-|::|->|=>|=)(?![:!#$%&*+.\\/<=>?@^|~-]+)', Operator.Word),
+            (r':[:!#$%&*+.\\/<=>?@^|~-]*', Keyword.Type),
+            (r'[:!#$%&*+.\\/<=>?@^|~-]+', Operator),
+            (
+                r'0[xX]_*[\da-fA-F](_*[\da-fA-F])*_*[pP][+-]?\d(_*\d)*',
+                Number.Float,
+            ),
+            (
+                r'0[xX]_*[\da-fA-F](_*[\da-fA-F])*\.[\da-fA-F](_*[\da-fA-F])*'
+                r'(_*[pP][+-]?\d(_*\d)*)?',
+                Number.Float,
+            ),
             (r'\d(_*\d)*_*[eE][+-]?\d(_*\d)*', Number.Float),
             (r'\d(_*\d)*\.\d(_*\d)*(_*[eE][+-]?\d(_*\d)*)?', Number.Float),
             (r'0[bB]_*[01](_*[01])*', Number.Bin),
             (r'0[oO]_*[0-7](_*[0-7])*', Number.Oct),
             (r'0[xX]_*[\da-fA-F](_*[\da-fA-F])*', Number.Hex),
             (r'\d(_*\d)*', Number.Integer),
-            #  Character/String Literals
             (r"'", String.Char, 'character'),
             (r'"', String, 'string'),
-            #  Special
             (r'\[\]', Keyword.Type),
             (r'\(\)', Name.Builtin),
             (r'[][(),;`{}]', Punctuation),
         ],
         'import': [
-            # Import statements
             (r'\s+', Whitespace),
             (r'"', String, 'string'),
-            # after "funclist" state
             (r'\)', Punctuation, '#pop'),
             (r'qualified\b', Keyword),
-            # import X as Y
-            (r'([' + uni.Lu + r'][\w.]*)(\s+)(as)(\s+)([' + uni.Lu + r'][\w.]*)',
-             bygroups(Name.Namespace, Whitespace, Keyword, Whitespace, Name), '#pop'),
-            # import X hiding (functions)
-            (r'([' + uni.Lu + r'][\w.]*)(\s+)(hiding)(\s+)(\()',
-             bygroups(Name.Namespace, Whitespace, Keyword, Whitespace, Punctuation), 'funclist'),
-            # import X (functions)
-            (r'([' + uni.Lu + r'][\w.]*)(\s+)(\()',
-             bygroups(Name.Namespace, Whitespace, Punctuation), 'funclist'),
-            # import X
+            (
+                f'([{uni.Lu}'
+                + r'][\w.]*)(\s+)(as)(\s+)(['
+                + uni.Lu
+                + r'][\w.]*)',
+                bygroups(
+                    Name.Namespace, Whitespace, Keyword, Whitespace, Name
+                ),
+                '#pop',
+            ),
+            (
+                f'([{uni.Lu}' + r'][\w.]*)(\s+)(hiding)(\s+)(\()',
+                bygroups(
+                    Name.Namespace,
+                    Whitespace,
+                    Keyword,
+                    Whitespace,
+                    Punctuation,
+                ),
+                'funclist',
+            ),
+            (
+                f'([{uni.Lu}' + r'][\w.]*)(\s+)(\()',
+                bygroups(Name.Namespace, Whitespace, Punctuation),
+                'funclist',
+            ),
             (r'[\w.]+', Name.Namespace, '#pop'),
         ],
         'module': [
             (r'\s+', Whitespace),
-            (r'([' + uni.Lu + r'][\w.]*)(\s+)(\()',
-             bygroups(Name.Namespace, Whitespace, Punctuation), 'funclist'),
-            (r'[' + uni.Lu + r'][\w.]*', Name.Namespace, '#pop'),
+            (
+                f'([{uni.Lu}' + r'][\w.]*)(\s+)(\()',
+                bygroups(Name.Namespace, Whitespace, Punctuation),
+                'funclist',
+            ),
+            (f'[{uni.Lu}' + r'][\w.]*', Name.Namespace, '#pop'),
         ],
         'funclist': [
             (r'\s+', Whitespace),
-            (r'[' + uni.Lu + r']\w*', Keyword.Type),
+            (f'[{uni.Lu}' + r']\w*', Keyword.Type),
             (r'(_[\w\']+|[' + uni.Ll + r'][\w\']*)', Name.Function),
             (r'--(?![!#$%&*+./<=>?@^|_~:\\]).*?$', Comment.Single),
             (r'\{-', Comment.Multiline, 'comment'),
             (r',', Punctuation),
             (r'[:!#$%&*+.\\/<=>?@^|~-]+', Operator),
-            # (HACK, but it makes sense to push two instances, believe me)
             (r'\(', Punctuation, ('funclist', 'funclist')),
             (r'\)', Punctuation, '#pop:2'),
         ],
-        # NOTE: the next four states are shared in the AgdaLexer; make sure
-        # any change is compatible with Agda as well or copy over and change
         'comment': [
             # Multiline Comments
             (r'[^-{}]+', Comment.Multiline),
@@ -155,6 +170,7 @@ class HaskellLexer(RegexLexer):
             (r'(\s+)(\\)', bygroups(Whitespace, String.Escape), '#pop'),
         ],
     }
+
 
 
 class HspecLexer(HaskellLexer):
@@ -524,7 +540,7 @@ class LiterateLexer(Lexer):
     def get_tokens_unprocessed(self, text):
         style = self.options.get('litstyle')
         if style is None:
-            style = (text.lstrip()[0:1] in '%\\') and 'latex' or 'bird'
+            style = 'latex' if text.lstrip()[:1] in '%\\' else 'bird'
 
         code = ''
         insertions = []
@@ -532,8 +548,7 @@ class LiterateLexer(Lexer):
             # bird-style
             for match in line_re.finditer(text):
                 line = match.group()
-                m = self.bird_re.match(line)
-                if m:
+                if m := self.bird_re.match(line):
                     insertions.append((len(code),
                                        [(0, Comment.Special, m.group(1))]))
                     code += m.group(2)
@@ -708,7 +723,7 @@ class KokaLexer(RegexLexer):
     symbols = r'[$%&*+@!/\\^~=.:\-?|<>]+'
 
     # symbol boundary: an operator keyword should not be followed by any of these
-    sboundary = '(?!' + symbols + ')'
+    sboundary = f'(?!{symbols})'
 
     # name boundary: a keyword should not be followed by any of these
     boundary = r'(?![\w/])'
@@ -722,126 +737,130 @@ class KokaLexer(RegexLexer):
     tokens = {
         'root': [
             include('whitespace'),
-
-            # go into type mode
-            (r'::?' + sboundary, tokenType, 'type'),
-            (r'(alias)(\s+)([a-z]\w*)?', bygroups(Keyword, Whitespace, tokenTypeDef),
-             'alias-type'),
-            (r'(struct)(\s+)([a-z]\w*)?', bygroups(Keyword, Whitespace, tokenTypeDef),
-             'struct-type'),
-            ((r'(%s)' % '|'.join(typeStartKeywords)) +
-             r'(\s+)([a-z]\w*)?', bygroups(Keyword, Whitespace, tokenTypeDef),
-             'type'),
-
-            # special sequences of tokens (we use ?: for non-capturing group as
-            # required by 'bygroups')
-            (r'(module)(\s+)(interface(?=\s))?(\s+)?((?:[a-z]\w*/)*[a-z]\w*)',
-             bygroups(Keyword, Whitespace, Keyword, Whitespace, Name.Namespace)),
-            (r'(import)(\s+)((?:[a-z]\w*/)*[a-z]\w*)'
-             r'(?:(\s*)(=)(\s*)(qualified)?(\s*)'
-             r'((?:[a-z]\w*/)*[a-z]\w*))?',
-             bygroups(Keyword, Whitespace, Name.Namespace, Whitespace, Keyword, Whitespace,
-                      Keyword, Whitespace, Name.Namespace)),
-
-            (r'^(public|private)?(\s+)?(function|fun|val)'
-             r'(\s+)([a-z]\w*|\((?:' + symbols + r'|/)\))',
-             bygroups(Keyword, Whitespace, Keyword, Whitespace, Name.Function)),
-            (r'^(?:(public|private)(?=\s+external))?((?<!^)\s+)?(external)(\s+)(inline(?=\s))?(\s+)?'
-             r'([a-z]\w*|\((?:' + symbols + r'|/)\))',
-             bygroups(Keyword, Whitespace, Keyword, Whitespace, Keyword, Whitespace, Name.Function)),
-
-            # keywords
-            (r'(%s)' % '|'.join(typekeywords) + boundary, Keyword.Type),
-            (r'(%s)' % '|'.join(keywords) + boundary, Keyword),
-            (r'(%s)' % '|'.join(builtin) + boundary, Keyword.Pseudo),
+            (f'::?{sboundary}', tokenType, 'type'),
+            (
+                r'(alias)(\s+)([a-z]\w*)?',
+                bygroups(Keyword, Whitespace, tokenTypeDef),
+                'alias-type',
+            ),
+            (
+                r'(struct)(\s+)([a-z]\w*)?',
+                bygroups(Keyword, Whitespace, tokenTypeDef),
+                'struct-type',
+            ),
+            (
+                (f"({'|'.join(typeStartKeywords)})" + r'(\s+)([a-z]\w*)?'),
+                bygroups(Keyword, Whitespace, tokenTypeDef),
+                'type',
+            ),
+            (
+                r'(module)(\s+)(interface(?=\s))?(\s+)?((?:[a-z]\w*/)*[a-z]\w*)',
+                bygroups(
+                    Keyword, Whitespace, Keyword, Whitespace, Name.Namespace
+                ),
+            ),
+            (
+                r'(import)(\s+)((?:[a-z]\w*/)*[a-z]\w*)'
+                r'(?:(\s*)(=)(\s*)(qualified)?(\s*)'
+                r'((?:[a-z]\w*/)*[a-z]\w*))?',
+                bygroups(
+                    Keyword,
+                    Whitespace,
+                    Name.Namespace,
+                    Whitespace,
+                    Keyword,
+                    Whitespace,
+                    Keyword,
+                    Whitespace,
+                    Name.Namespace,
+                ),
+            ),
+            (
+                r'^(public|private)?(\s+)?(function|fun|val)'
+                r'(\s+)([a-z]\w*|\((?:' + symbols + r'|/)\))',
+                bygroups(
+                    Keyword, Whitespace, Keyword, Whitespace, Name.Function
+                ),
+            ),
+            (
+                r'^(?:(public|private)(?=\s+external))?((?<!^)\s+)?(external)(\s+)(inline(?=\s))?(\s+)?'
+                r'([a-z]\w*|\((?:' + symbols + r'|/)\))',
+                bygroups(
+                    Keyword,
+                    Whitespace,
+                    Keyword,
+                    Whitespace,
+                    Keyword,
+                    Whitespace,
+                    Name.Function,
+                ),
+            ),
+            (f"({'|'.join(typekeywords)}){boundary}", Keyword.Type),
+            (f"({'|'.join(keywords)}){boundary}", Keyword),
+            (f"({'|'.join(builtin)}){boundary}", Keyword.Pseudo),
             (r'::?|:=|\->|[=.]' + sboundary, Keyword),
-
-            # names
-            (r'((?:[a-z]\w*/)*)([A-Z]\w*)',
-             bygroups(Name.Namespace, tokenConstructor)),
+            (
+                r'((?:[a-z]\w*/)*)([A-Z]\w*)',
+                bygroups(Name.Namespace, tokenConstructor),
+            ),
             (r'((?:[a-z]\w*/)*)([a-z]\w*)', bygroups(Name.Namespace, Name)),
-            (r'((?:[a-z]\w*/)*)(\((?:' + symbols + r'|/)\))',
-             bygroups(Name.Namespace, Name)),
+            (
+                r'((?:[a-z]\w*/)*)(\((?:' + symbols + r'|/)\))',
+                bygroups(Name.Namespace, Name),
+            ),
             (r'_\w*', Name.Variable),
-
-            # literal string
             (r'@"', String.Double, 'litstring'),
-
-            # operators
-            (symbols + "|/(?![*/])", Operator),
+            (f"{symbols}|/(?![*/])", Operator),
             (r'`', Operator),
             (r'[{}()\[\];,]', Punctuation),
-
-            # literals. No check for literal characters with len > 1
             (r'[0-9]+\.[0-9]+([eE][\-+]?[0-9]+)?', Number.Float),
             (r'0[xX][0-9a-fA-F]+', Number.Hex),
             (r'[0-9]+', Number.Integer),
-
             (r"'", String.Char, 'char'),
             (r'"', String.Double, 'string'),
         ],
-
-        # type started by alias
-        'alias-type': [
-            (r'=', Keyword),
-            include('type')
-        ],
-
-        # type started by struct
+        'alias-type': [(r'=', Keyword), include('type')],
         'struct-type': [
             (r'(?=\((?!,*\)))', Punctuation, '#pop'),
-            include('type')
+            include('type'),
         ],
-
-        # type started by colon
         'type': [
             (r'[(\[<]', tokenType, 'type-nested'),
-            include('type-content')
+            include('type-content'),
         ],
-
-        # type nested in brackets: can contain parameters, comma etc.
         'type-nested': [
             (r'[)\]>]', tokenType, '#pop'),
             (r'[(\[<]', tokenType, 'type-nested'),
             (r',', tokenType),
-            (r'([a-z]\w*)(\s*)(:)(?!:)',
-             bygroups(Name, Whitespace, tokenType)),  # parameter name
-            include('type-content')
+            (
+                r'([a-z]\w*)(\s*)(:)(?!:)',
+                bygroups(Name, Whitespace, tokenType),
+            ),  # parameter name
+            include('type-content'),
         ],
-
-        # shared contents of a type
         'type-content': [
             include('whitespace'),
-
-            # keywords
-            (r'(%s)' % '|'.join(typekeywords) + boundary, Keyword),
-            (r'(?=((%s)' % '|'.join(keywords) + boundary + '))',
-             Keyword, '#pop'),  # need to match because names overlap...
-
-            # kinds
-            (r'[EPHVX]' + boundary, tokenType),
-
-            # type names
+            (f"({'|'.join(typekeywords)}){boundary}", Keyword),
+            (f"(?=(({'|'.join(keywords)}){boundary}))", Keyword, '#pop'),
+            (f'[EPHVX]{boundary}', tokenType),
             (r'[a-z][0-9]*(?![\w/])', tokenType),
-            (r'_\w*', tokenType.Variable),  # Generic.Emph
-            (r'((?:[a-z]\w*/)*)([A-Z]\w*)',
-             bygroups(Name.Namespace, tokenType)),
-            (r'((?:[a-z]\w*/)*)([a-z]\w+)',
-             bygroups(Name.Namespace, tokenType)),
-
-            # type keyword operators
+            (r'_\w*', tokenType.Variable),
+            (
+                r'((?:[a-z]\w*/)*)([A-Z]\w*)',
+                bygroups(Name.Namespace, tokenType),
+            ),
+            (
+                r'((?:[a-z]\w*/)*)([a-z]\w+)',
+                bygroups(Name.Namespace, tokenType),
+            ),
             (r'::|->|[.:|]', tokenType),
-
-            # catchall
-            default('#pop')
+            default('#pop'),
         ],
-
-        # comments and literals
         'whitespace': [
             (r'(\n\s*)(#.*)$', bygroups(Whitespace, Comment.Preproc)),
             (r'\s+', Whitespace),
             (r'/\*', Comment.Multiline, 'comment'),
-            (r'//.*$', Comment.Single)
+            (r'//.*$', Comment.Single),
         ],
         'comment': [
             (r'[^/*]+', Comment.Multiline),
@@ -869,6 +888,6 @@ class KokaLexer(RegexLexer):
             (r'\\x[0-9a-fA-F]{2}', String.Escape),
             (r'\\u[0-9a-fA-F]{4}', String.Escape),
             # Yes, \U literals are 6 hex digits.
-            (r'\\U[0-9a-fA-F]{6}', String.Escape)
-        ]
+            (r'\\U[0-9a-fA-F]{6}', String.Escape),
+        ],
     }

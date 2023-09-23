@@ -305,12 +305,12 @@ class NemerleLexer(RegexLexer):
 
         RegexLexer.__init__(self, **options)
 
-    def analyse_text(text):
+    def analyse_text(self):
         """Nemerle is quite similar to Python, but @if is relatively uncommon
         elsewhere."""
         result = 0
 
-        if '@if' in text:
+        if '@if' in self:
             result += 0.1
 
         return result
@@ -489,8 +489,8 @@ class VbNetLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
-        if re.search(r'^\s*(#If|Module|Namespace)', text, re.MULTILINE):
+    def analyse_text(self):
+        if re.search(r'^\s*(#If|Module|Namespace)', self, re.MULTILINE):
             return 0.5
 
 
@@ -531,10 +531,10 @@ class CSharpAspxLexer(DelegatingLexer):
     def __init__(self, **options):
         super().__init__(CSharpLexer, GenericAspxLexer, **options)
 
-    def analyse_text(text):
-        if re.search(r'Page\s*Language="C#"', text, re.I) is not None:
+    def analyse_text(self):
+        if re.search(r'Page\s*Language="C#"', self, re.I) is not None:
             return 0.2
-        elif re.search(r'script[^>]+language=["\']C#', text, re.I) is not None:
+        elif re.search(r'script[^>]+language=["\']C#', self, re.I) is not None:
             return 0.15
 
 
@@ -551,10 +551,10 @@ class VbNetAspxLexer(DelegatingLexer):
     def __init__(self, **options):
         super().__init__(VbNetLexer, GenericAspxLexer, **options)
 
-    def analyse_text(text):
-        if re.search(r'Page\s*Language="Vb"', text, re.I) is not None:
+    def analyse_text(self):
+        if re.search(r'Page\s*Language="Vb"', self, re.I) is not None:
             return 0.2
-        elif re.search(r'script[^>]+language=["\']vb', text, re.I) is not None:
+        elif re.search(r'script[^>]+language=["\']vb', self, re.I) is not None:
             return 0.15
 
 
@@ -709,13 +709,13 @@ class FSharpLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """F# doesn't have that many unique features -- |> and <| are weak
         indicators."""
         result = 0
-        if '|>' in text:
+        if '|>' in self:
             result += 0.05
-        if '<|' in text:
+        if '<|' in self:
             result += 0.05
 
         return result

@@ -40,9 +40,7 @@ class EscapeSequence:
         self.italic = italic
 
     def escape(self, attrs):
-        if len(attrs):
-            return "\x1b[" + ";".join(attrs) + "m"
-        return ""
+        return "\x1b[" + ";".join(attrs) + "m" if len(attrs) else ""
 
     def color_string(self):
         attrs = []

@@ -171,15 +171,15 @@ class ScalaLexer(RegexLexer):
     opchar = '[!#%&*\\-\\/:?@^' + uni.combine('Sm', 'So') + ']'
     letter = '[_\\$' + uni.combine('Ll', 'Lu', 'Lo', 'Nl', 'Lt') + ']'
     upperLetter = '[' + uni.combine('Lu', 'Lt') + ']'
-    letterOrDigit = '(?:%s|[0-9])' % letter
+    letterOrDigit = f'(?:{letter}|[0-9])'
     letterOrDigitNoDollarSign = '(?:%s|[0-9])' % letter.replace('\\$', '')
-    alphaId = '%s+' % letter
-    simpleInterpolatedVariable  = '%s%s*' % (letter, letterOrDigitNoDollarSign)
-    idrest = '%s%s*(?:(?<=_)%s+)?' % (letter, letterOrDigit, opchar)
-    idUpper = '%s%s*(?:(?<=_)%s+)?' % (upperLetter, letterOrDigit, opchar)
-    plainid = '(?:%s|%s+)' % (idrest, opchar)
+    alphaId = f'{letter}+'
+    simpleInterpolatedVariable = f'{letter}{letterOrDigitNoDollarSign}*'
+    idrest = f'{letter}{letterOrDigit}*(?:(?<=_){opchar}+)?'
+    idUpper = f'{upperLetter}{letterOrDigit}*(?:(?<=_){opchar}+)?'
+    plainid = f'(?:{idrest}|{opchar}+)'
     backQuotedId = r'`[^`]+`'
-    anyId = r'(?:%s|%s)' % (plainid, backQuotedId)
+    anyId = f'(?:{plainid}|{backQuotedId})'
     notStartOfComment = r'(?!//|/\*)'
     endOfLineMaybeWithComment = r'(?=\s*(//|$))'
 
@@ -226,8 +226,6 @@ class ScalaLexer(RegexLexer):
             include('punctuation'),
             include('names'),
         ],
-
-        # Includes:
         'whitespace': [
             (r'\s+', Whitespace),
         ],
@@ -242,8 +240,11 @@ class ScalaLexer(RegexLexer):
             (r'\b(import)(\s+)', bygroups(Keyword, Whitespace), 'import-path'),
         ],
         'exports': [
-            (r'\b(export)(\s+)(given)(\s+)',
-                bygroups(Keyword, Whitespace, Keyword, Whitespace), 'export-path'),
+            (
+                r'\b(export)(\s+)(given)(\s+)',
+                bygroups(Keyword, Whitespace, Keyword, Whitespace),
+                'export-path',
+            ),
             (r'\b(export)(\s+)', bygroups(Keyword, Whitespace), 'export-path'),
         ],
         'storage-modifiers': [
@@ -252,55 +253,83 @@ class ScalaLexer(RegexLexer):
             # the correct keyword. Note that soft modifiers can be followed by a
             # sequence of regular modifiers; [a-z\s]* skips those, and we just
             # check that the soft modifier is applied to a supported statement.
-            (r'\b(transparent|opaque|infix|open|inline)\b(?=[a-z\s]*\b'
-             r'(def|val|var|given|type|class|trait|object|enum)\b)', Keyword),
+            (
+                r'\b(transparent|opaque|infix|open|inline)\b(?=[a-z\s]*\b'
+                r'(def|val|var|given|type|class|trait|object|enum)\b)',
+                Keyword,
+            ),
         ],
-        'annotations': [
-            (r'@%s' % idrest, Name.Decorator),
-        ],
+        'annotations': [(f'@{idrest}', Name.Decorator)],
         'using': [
             # using is a soft keyword, can only be used in the first position of
             # a parameter or argument list.
-            (r'(\()(\s*)(using)(\s)', bygroups(Punctuation, Whitespace, Keyword, Whitespace)),
+            (
+                r'(\()(\s*)(using)(\s)',
+                bygroups(Punctuation, Whitespace, Keyword, Whitespace),
+            ),
         ],
         'declarations': [
-            (r'\b(def)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
-             bygroups(Keyword, Whitespace, Name.Function)),
-            (r'\b(trait)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
-                bygroups(Keyword, Whitespace, Name.Class)),
-            (r'\b(?:(case)(\s+))?(class|object|enum)\b(\s*)%s(%s)?' %
-                (notStartOfComment, anyId),
-                bygroups(Keyword, Whitespace, Keyword, Whitespace, Name.Class)),
-            (r'(?<!\.)\b(type)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
-                bygroups(Keyword, Whitespace, Name.Class)),
+            (
+                r'\b(def)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
+                bygroups(Keyword, Whitespace, Name.Function),
+            ),
+            (
+                r'\b(trait)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
+            (
+                r'\b(?:(case)(\s+))?(class|object|enum)\b(\s*)%s(%s)?'
+                % (notStartOfComment, anyId),
+                bygroups(Keyword, Whitespace, Keyword, Whitespace, Name.Class),
+            ),
+            (
+                r'(?<!\.)\b(type)\b(\s*)%s(%s)?' % (notStartOfComment, anyId),
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
             (r'\b(val|var)\b', Keyword.Declaration),
-            (r'\b(package)(\s+)(object)\b(\s*)%s(%s)?' %
-                (notStartOfComment, anyId),
-                bygroups(Keyword, Whitespace, Keyword, Whitespace, Name.Namespace)),
+            (
+                r'\b(package)(\s+)(object)\b(\s*)%s(%s)?'
+                % (notStartOfComment, anyId),
+                bygroups(
+                    Keyword, Whitespace, Keyword, Whitespace, Name.Namespace
+                ),
+            ),
             (r'\b(package)(\s+)', bygroups(Keyword, Whitespace), 'package'),
-            (r'\b(given)\b(\s*)(%s)' % idUpper,
-                bygroups(Keyword, Whitespace, Name.Class)),
-            (r'\b(given)\b(\s*)(%s)?' % anyId, 
-                bygroups(Keyword, Whitespace, Name)),
+            (
+                r'\b(given)\b(\s*)(%s)' % idUpper,
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
+            (
+                r'\b(given)\b(\s*)(%s)?' % anyId,
+                bygroups(Keyword, Whitespace, Name),
+            ),
         ],
         'inheritance': [
-            (r'\b(extends|with|derives)\b(\s*)'
-             r'(%s|%s|(?=\([^\)]+=>)|(?=%s)|(?="))?' %
-                (idUpper, backQuotedId, plainid),
-                bygroups(Keyword, Whitespace, Name.Class)),
+            (
+                r'\b(extends|with|derives)\b(\s*)'
+                r'(%s|%s|(?=\([^\)]+=>)|(?=%s)|(?="))?'
+                % (idUpper, backQuotedId, plainid),
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
         ],
         'extension': [
             (r'\b(extension)(\s+)(?=[\[\(])', bygroups(Keyword, Whitespace)),
         ],
         'end': [
             # end is a soft keyword, should only be highlighted in certain cases
-            (r'\b(end)(\s+)(if|while|for|match|new|extension|val|var)\b',
-                bygroups(Keyword, Whitespace, Keyword)),
-            (r'\b(end)(\s+)(%s)%s' % (idUpper, endOfLineMaybeWithComment),
-                bygroups(Keyword, Whitespace, Name.Class)),
-            (r'\b(end)(\s+)(%s|%s)?%s' %
-                (backQuotedId, plainid, endOfLineMaybeWithComment),
-                bygroups(Keyword, Whitespace, Name.Namespace)),
+            (
+                r'\b(end)(\s+)(if|while|for|match|new|extension|val|var)\b',
+                bygroups(Keyword, Whitespace, Keyword),
+            ),
+            (
+                r'\b(end)(\s+)(%s)%s' % (idUpper, endOfLineMaybeWithComment),
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
+            (
+                r'\b(end)(\s+)(%s|%s)?%s'
+                % (backQuotedId, plainid, endOfLineMaybeWithComment),
+                bygroups(Keyword, Whitespace, Name.Namespace),
+            ),
         ],
         'punctuation': [
             (r'[{}()\[\];,.]', Punctuation),
@@ -319,15 +348,21 @@ class ScalaLexer(RegexLexer):
             (r'\b(this|super)\b', Name.Builtin.Pseudo),
             (r'(true|false|null)\b', Keyword.Constant),
             (r'0[xX][0-9a-fA-F_]*', Number.Hex),
-            (r'([0-9][0-9_]*\.[0-9][0-9_]*|\.[0-9][0-9_]*)'
-             r'([eE][+-]?[0-9][0-9_]*)?[fFdD]?', Number.Float),
+            (
+                r'([0-9][0-9_]*\.[0-9][0-9_]*|\.[0-9][0-9_]*)'
+                r'([eE][+-]?[0-9][0-9_]*)?[fFdD]?',
+                Number.Float,
+            ),
             (r'[0-9]+([eE][+-]?[0-9]+)?[fFdD]', Number.Float),
             (r'[0-9]+([eE][+-]?[0-9]+)[fFdD]?', Number.Float),
             (r'[0-9]+[lL]', Number.Integer.Long),
             (r'[0-9]+', Number.Integer),
             (r'""".*?"""(?!")', String),
             (r'"(\\\\|\\"|[^"])*"', String),
-            (r"(')(\\.)(')", bygroups(String.Char, String.Escape, String.Char)),
+            (
+                r"(')(\\.)(')",
+                bygroups(String.Char, String.Escape, String.Char),
+            ),
             (r"'[^\\]'|'\\u[0-9a-fA-F]{4}'", String.Char),
         ],
         "strings": [
@@ -335,19 +370,21 @@ class ScalaLexer(RegexLexer):
             (r'[fs]"', String, 'interpolated-string'),
             (r'raw"(\\\\|\\"|[^"])*"', String),
         ],
-        'symbols': [
-            (r"('%s)(?!')" % plainid, String.Symbol),
-        ],
+        'symbols': [(f"('{plainid})(?!')", String.Symbol)],
         'singleton-type': [
             (r'(\.)(type)\b', bygroups(Punctuation, Keyword)),
         ],
         'inline': [
             # inline is a soft modifier, only highlighted if followed by if,
             # match or parameters.
-            (r'\b(inline)(?=\s+(%s|%s)\s*:)' % (plainid, backQuotedId),
-                Keyword),
-            (r'\b(inline)\b(?=(?:.(?!\b(?:val|def|given)\b))*\b(if|match)\b)',
-                Keyword),
+            (
+                r'\b(inline)(?=\s+(%s|%s)\s*:)' % (plainid, backQuotedId),
+                Keyword,
+            ),
+            (
+                r'\b(inline)\b(?=(?:.(?!\b(?:val|def|given)\b))*\b(if|match)\b)',
+                Keyword,
+            ),
         ],
         'quoted': [
             # '{...} or ${...}
@@ -359,8 +396,6 @@ class ScalaLexer(RegexLexer):
             (idUpper, Name.Class),
             (anyId, Name),
         ],
-
-        # States
         'comment': [
             (r'[^/*]+', Comment.Multiline),
             (r'/\*', Comment.Multiline, '#push'),
@@ -423,8 +458,6 @@ class ScalaLexer(RegexLexer):
             (r'\}', Punctuation, '#pop'),
             include('root'),
         ],
-
-        # Helpers
         'qualified-name': [
             (idUpper, Name.Class),
             (r'(%s)(\.)' % anyId, bygroups(Name.Namespace, Punctuation)),
@@ -435,12 +468,15 @@ class ScalaLexer(RegexLexer):
         'interpolated-string-common': [
             (r'[^"$\\]+', String),
             (r'\$\$', String.Escape),
-            (r'(\$)(%s)' % simpleInterpolatedVariable,
-                bygroups(String.Interpol, Name)),
+            (
+                r'(\$)(%s)' % simpleInterpolatedVariable,
+                bygroups(String.Interpol, Name),
+            ),
             (r'\$\{', String.Interpol, 'interpolated-string-brace'),
             (r'\\.', String),
         ],
     }
+
 
 
 class GosuLexer(RegexLexer):
@@ -614,8 +650,8 @@ class GroovyLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        return shebang_matches(text, r'groovy')
+    def analyse_text(self):
+        return shebang_matches(self, r'groovy')
 
 
 class IokeLexer(RegexLexer):
@@ -810,6 +846,8 @@ class IokeLexer(RegexLexer):
     }
 
 
+
+
 class ClojureLexer(RegexLexer):
     """
     Lexer for Clojure source code.
@@ -895,60 +933,29 @@ class ClojureLexer(RegexLexer):
 
     tokens = {
         'root': [
-            # the comments - always starting with semicolon
-            # and going to the end of the line
             (r';.*$', Comment.Single),
-
-            # whitespaces - usually not relevant
             (r',+', Text),
             (r'\s+', Whitespace),
-
-            # numbers
             (r'-?\d+\.\d+', Number.Float),
             (r'-?\d+/\d+', Number),
             (r'-?\d+', Number.Integer),
             (r'0x-?[abcdef\d]+', Number.Hex),
-
-            # strings, symbols and characters
             (r'"(\\\\|\\[^\\]|[^"\\])*"', String),
-            (r"'" + valid_name, String.Symbol),
+            (f"'{valid_name}", String.Symbol),
             (r"\\(.|[a-z]+)", String.Char),
-
-            # keywords
-            (r'::?#?' + valid_name, String.Symbol),
-
-            # special operators
+            (f'::?#?{valid_name}', String.Symbol),
             (r'~@|[`\'#^~&@]', Operator),
-
-            # highlight the special forms
             (words(special_forms, suffix=' '), Keyword),
-
-            # Technically, only the special forms are 'keywords'. The problem
-            # is that only treating them as keywords means that things like
-            # 'defn' and 'ns' need to be highlighted as builtins. This is ugly
-            # and weird for most styles. So, as a compromise we're going to
-            # highlight them as Keyword.Declarations.
             (words(declarations, suffix=' '), Keyword.Declaration),
-
-            # highlight the builtins
             (words(builtins, suffix=' '), Name.Builtin),
-
-            # the remaining functions
             (r'(?<=\()' + valid_name, Name.Function),
-
-            # find the remaining variables
             (valid_name, Name.Variable),
-
-            # Clojure accepts vector notation
             (r'(\[|\])', Punctuation),
-
-            # Clojure accepts map notation
             (r'(\{|\})', Punctuation),
-
-            # the famous parentheses!
             (r'(\(|\))', Punctuation),
-        ],
+        ]
     }
+
 
 
 class ClojureScriptLexer(ClojureLexer):
@@ -1091,6 +1098,8 @@ class CeylonLexer(RegexLexer):
     }
 
 
+
+
 class KotlinLexer(RegexLexer):
     """
     For Kotlin source code.
@@ -1115,7 +1124,7 @@ class KotlinLexer(RegexLexer):
                                  'Mn', 'Mc', 'Zs')
                 + r'\'~!%^&*()+=|\[\]:;,.<>/\?-]*')
 
-    kt_id = '(' + kt_name + '|`' + kt_space_name + '`)'
+    kt_id = f'({kt_name}|`{kt_space_name}`)'
 
     modifiers = (r'actual|abstract|annotation|companion|const|crossinline|'
                 r'data|enum|expect|external|final|infix|inline|inner|'
@@ -1124,83 +1133,145 @@ class KotlinLexer(RegexLexer):
 
     tokens = {
         'root': [
-            # Whitespaces
             (r'[^\S\n]+', Whitespace),
             (r'\s+', Whitespace),
-            (r'\\$', String.Escape),  # line continuation
+            (r'\\$', String.Escape),
             (r'\n', Whitespace),
-            # Comments
             (r'(//.*?)(\n)', bygroups(Comment.Single, Whitespace)),
-            (r'^(#!/.+?)(\n)', bygroups(Comment.Single, Whitespace)),  # shebang for kotlin scripts
+            (r'^(#!/.+?)(\n)', bygroups(Comment.Single, Whitespace)),
             (r'/[*].*?[*]/', Comment.Multiline),
-            # Keywords
             (r'as\?', Keyword),
-            (r'(as|break|by|catch|constructor|continue|do|dynamic|else|finally|'
-             r'get|for|if|init|[!]*in|[!]*is|out|reified|return|set|super|this|'
-             r'throw|try|typealias|typeof|vararg|when|where|while)\b', Keyword),
+            (
+                r'(as|break|by|catch|constructor|continue|do|dynamic|else|finally|'
+                r'get|for|if|init|[!]*in|[!]*is|out|reified|return|set|super|this|'
+                r'throw|try|typealias|typeof|vararg|when|where|while)\b',
+                Keyword,
+            ),
             (r'it\b', Name.Builtin),
-            # Built-in types
-            (words(('Boolean?', 'Byte?', 'Char?', 'Double?', 'Float?',
-             'Int?', 'Long?', 'Short?', 'String?', 'Any?', 'Unit?')), Keyword.Type),
-            (words(('Boolean', 'Byte', 'Char', 'Double', 'Float',
-             'Int', 'Long', 'Short', 'String', 'Any', 'Unit'), suffix=r'\b'), Keyword.Type),
-            # Constants
+            (
+                words(
+                    (
+                        'Boolean?',
+                        'Byte?',
+                        'Char?',
+                        'Double?',
+                        'Float?',
+                        'Int?',
+                        'Long?',
+                        'Short?',
+                        'String?',
+                        'Any?',
+                        'Unit?',
+                    )
+                ),
+                Keyword.Type,
+            ),
+            (
+                words(
+                    (
+                        'Boolean',
+                        'Byte',
+                        'Char',
+                        'Double',
+                        'Float',
+                        'Int',
+                        'Long',
+                        'Short',
+                        'String',
+                        'Any',
+                        'Unit',
+                    ),
+                    suffix=r'\b',
+                ),
+                Keyword.Type,
+            ),
             (r'(true|false|null)\b', Keyword.Constant),
-            # Imports
-            (r'(package|import)(\s+)(\S+)', bygroups(Keyword, Whitespace, Name.Namespace)),
-            # Dot access
-            (r'(\?\.)((?:[^\W\d]|\$)[\w$]*)', bygroups(Operator, Name.Attribute)),
-            (r'(\.)((?:[^\W\d]|\$)[\w$]*)', bygroups(Punctuation, Name.Attribute)),
-            # Annotations
+            (
+                r'(package|import)(\s+)(\S+)',
+                bygroups(Keyword, Whitespace, Name.Namespace),
+            ),
+            (
+                r'(\?\.)((?:[^\W\d]|\$)[\w$]*)',
+                bygroups(Operator, Name.Attribute),
+            ),
+            (
+                r'(\.)((?:[^\W\d]|\$)[\w$]*)',
+                bygroups(Punctuation, Name.Attribute),
+            ),
             (r'@[^\W\d][\w.]*', Name.Decorator),
-            # Labels
             (r'[^\W\d][\w.]+@', Name.Decorator),
-            # Object expression
-            (r'(object)(\s+)(:)(\s+)', bygroups(Keyword, Whitespace, Punctuation, Whitespace), 'class'),
-            # Types
-            (r'((?:(?:' + modifiers + r'|fun)\s+)*)(class|interface|object)(\s+)',
-             bygroups(using(this, state='modifiers'), Keyword.Declaration, Whitespace), 'class'),
-            # Variables
-            (r'(var|val)(\s+)(\()', bygroups(Keyword.Declaration, Whitespace, Punctuation),
-             'destructuring_assignment'),
-            (r'((?:(?:' + modifiers + r')\s+)*)(var|val)(\s+)',
-             bygroups(using(this, state='modifiers'), Keyword.Declaration, Whitespace), 'variable'),
-            # Functions
-            (r'((?:(?:' + modifiers + r')\s+)*)(fun)(\s+)',
-             bygroups(using(this, state='modifiers'), Keyword.Declaration, Whitespace), 'function'),
-            # Operators
+            (
+                r'(object)(\s+)(:)(\s+)',
+                bygroups(Keyword, Whitespace, Punctuation, Whitespace),
+                'class',
+            ),
+            (
+                f'((?:(?:{modifiers}'
+                + r'|fun)\s+)*)(class|interface|object)(\s+)',
+                bygroups(
+                    using(this, state='modifiers'),
+                    Keyword.Declaration,
+                    Whitespace,
+                ),
+                'class',
+            ),
+            (
+                r'(var|val)(\s+)(\()',
+                bygroups(Keyword.Declaration, Whitespace, Punctuation),
+                'destructuring_assignment',
+            ),
+            (
+                f'((?:(?:{modifiers}' + r')\s+)*)(var|val)(\s+)',
+                bygroups(
+                    using(this, state='modifiers'),
+                    Keyword.Declaration,
+                    Whitespace,
+                ),
+                'variable',
+            ),
+            (
+                f'((?:(?:{modifiers}' + r')\s+)*)(fun)(\s+)',
+                bygroups(
+                    using(this, state='modifiers'),
+                    Keyword.Declaration,
+                    Whitespace,
+                ),
+                'function',
+            ),
             (r'::|!!|\?[:.]', Operator),
             (r'[~^*!%&\[\]<>|+=/?-]', Operator),
-            # Punctuation
             (r'[{}();:.,]', Punctuation),
-            # Strings
             (r'"""', String, 'multiline_string'),
             (r'"', String, 'string'),
             (r"'\\.'|'[^\\]'", String.Char),
-            # Numbers
-            (r"[0-9](\.[0-9]*)?([eE][+-][0-9]+)?[flFL]?|"
-             r"0[xX][0-9a-fA-F]+[Ll]?", Number),
-            # Identifiers
-            (r'' + kt_id + r'((\?[^.])?)', Name) # additionally handle nullable types
+            (
+                r"[0-9](\.[0-9]*)?([eE][+-][0-9]+)?[flFL]?|"
+                r"0[xX][0-9a-fA-F]+[Ll]?",
+                Number,
+            ),
+            (f'{kt_id}' + r'((\?[^.])?)', Name),
         ],
-        'class': [
-            (kt_id, Name.Class, '#pop')
-        ],
-        'variable': [
-            (kt_id, Name.Variable, '#pop')
-        ],
+        'class': [(kt_id, Name.Class, '#pop')],
+        'variable': [(kt_id, Name.Variable, '#pop')],
         'destructuring_assignment': [
             (r',', Punctuation),
             (r'\s+', Whitespace),
             (kt_id, Name.Variable),
-            (r'(:)(\s+)(' + kt_id + ')', bygroups(Punctuation, Whitespace, Name)),
+            (
+                r'(:)(\s+)(' + kt_id + ')',
+                bygroups(Punctuation, Whitespace, Name),
+            ),
             (r'<', Operator, 'generic'),
-            (r'\)', Punctuation, '#pop')
+            (r'\)', Punctuation, '#pop'),
         ],
         'function': [
             (r'<', Operator, 'generic'),
-            (r'' + kt_id + r'(\.)' + kt_id, bygroups(Name, Punctuation, Name.Function), '#pop'),
-            (kt_id, Name.Function, '#pop')
+            (
+                f'{kt_id}' + r'(\.)' + kt_id,
+                bygroups(Name, Punctuation, Name.Function),
+                '#pop',
+            ),
+            (kt_id, Name.Function, '#pop'),
         ],
         'generic': [
             (r'(>)(\s*)', bygroups(Operator, Whitespace), '#pop'),
@@ -1208,21 +1279,18 @@ class KotlinLexer(RegexLexer):
             (r'(reified|out|in)\b', Keyword),
             (r',', Punctuation),
             (r'\s+', Whitespace),
-            (kt_id, Name)
+            (kt_id, Name),
         ],
         'modifiers': [
             (r'\w+', Keyword.Declaration),
             (r'\s+', Whitespace),
-            default('#pop')
+            default('#pop'),
         ],
-        'string': [
-            (r'"', String, '#pop'),
-            include('string_common')
-        ],
+        'string': [(r'"', String, '#pop'), include('string_common')],
         'multiline_string': [
             (r'"""', String, '#pop'),
             (r'"', String),
-            include('string_common')
+            include('string_common'),
         ],
         'string_common': [
             (r'\\\\', String),  # escaped backslash
@@ -1230,21 +1298,22 @@ class KotlinLexer(RegexLexer):
             (r'\\', String),  # bare backslash
             (r'\$\{', String.Interpol, 'interpolation'),
             (r'(\$)(\w+)', bygroups(String.Interpol, Name)),
-            (r'[^\\"$]+', String)
+            (r'[^\\"$]+', String),
         ],
         'interpolation': [
             (r'"', String),
             (r'\$\{', String.Interpol, 'interpolation'),
             (r'\{', Punctuation, 'scope'),
             (r'\}', String.Interpol, '#pop'),
-            include('root')
+            include('root'),
         ],
         'scope': [
             (r'\{', Punctuation, 'scope'),
             (r'\}', Punctuation, '#pop'),
-            include('root')
-        ]
+            include('root'),
+        ],
     }
+
 
 
 class XtendLexer(RegexLexer):
@@ -1747,15 +1816,18 @@ class JasminLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         score = 0
-        if re.search(r'^\s*\.class\s', text, re.MULTILINE):
+        if re.search(r'^\s*\.class\s', self, re.MULTILINE):
             score += 0.5
-            if re.search(r'^\s*[a-z]+_[a-z]+\b', text, re.MULTILINE):
+            if re.search(r'^\s*[a-z]+_[a-z]+\b', self, re.MULTILINE):
                 score += 0.3
-        if re.search(r'^\s*\.(attribute|bytecode|debug|deprecated|enclosing|'
-                     r'inner|interface|limit|set|signature|stack)\b', text,
-                     re.MULTILINE):
+        if re.search(
+            r'^\s*\.(attribute|bytecode|debug|deprecated|enclosing|'
+            r'inner|interface|limit|set|signature|stack)\b',
+            self,
+            re.MULTILINE,
+        ):
             score += 0.6
         return min(score, 1.0)
 

@@ -8,6 +8,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 import re
 
 from pygments.lexer import bygroups, combined, default, do_insertions, include, \
@@ -27,7 +28,7 @@ JS_IDENT_START = ('(?:[$_' + uni.combine('Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl') +
 JS_IDENT_PART = ('(?:[$' + uni.combine('Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl',
                                        'Mn', 'Mc', 'Nd', 'Pc') +
                  '\u200c\u200d]|\\\\u[a-fA-F0-9]{4})')
-JS_IDENT = JS_IDENT_START + '(?:' + JS_IDENT_PART + ')*'
+JS_IDENT = f'{JS_IDENT_START}(?:{JS_IDENT_PART})*'
 
 line_re = re.compile('.*?\n')
 
@@ -135,6 +136,8 @@ class JavascriptLexer(RegexLexer):
     }
 
 
+
+
 class TypeScriptLexer(JavascriptLexer):
     """
     For TypeScript source code.
@@ -154,23 +157,34 @@ class TypeScriptLexer(JavascriptLexer):
 
     tokens = {
         'root': [
-            (r'(abstract|implements|private|protected|public|readonly)\b',
-                Keyword, 'slashstartsregex'),
-            (r'(enum|interface|override)\b', Keyword.Declaration, 'slashstartsregex'),
+            (
+                r'(abstract|implements|private|protected|public|readonly)\b',
+                Keyword,
+                'slashstartsregex',
+            ),
+            (
+                r'(enum|interface|override)\b',
+                Keyword.Declaration,
+                'slashstartsregex',
+            ),
             (r'\b(declare|type)\b', Keyword.Reserved),
-            # Match variable type keywords
             (r'\b(string|boolean|number)\b', Keyword.Type),
-            # Match stuff like: module name {...}
-            (r'\b(module)(\s*)([\w?.$]+)(\s*)',
-             bygroups(Keyword.Reserved, Whitespace, Name.Other, Whitespace), 'slashstartsregex'),
-            # Match stuff like: (function: return type)
-            (r'([\w?.$]+)(\s*)(:)(\s*)([\w?.$]+)',
-             bygroups(Name.Other, Whitespace, Operator, Whitespace, Keyword.Type)),
-            # Match stuff like: Decorators
-            (r'@' + JS_IDENT, Keyword.Declaration),
+            (
+                r'\b(module)(\s*)([\w?.$]+)(\s*)',
+                bygroups(Keyword.Reserved, Whitespace, Name.Other, Whitespace),
+                'slashstartsregex',
+            ),
+            (
+                r'([\w?.$]+)(\s*)(:)(\s*)([\w?.$]+)',
+                bygroups(
+                    Name.Other, Whitespace, Operator, Whitespace, Keyword.Type
+                ),
+            ),
+            (f'@{JS_IDENT}', Keyword.Declaration),
             inherit,
-        ],
+        ]
     }
+
 
 
 class KalLexer(RegexLexer):
@@ -777,13 +791,13 @@ class LassoLexer(RegexLexer):
                 continue
             yield index, token, value
 
-    def analyse_text(text):
+    def analyse_text(self):
         rv = 0.0
-        if 'bin/lasso9' in text:
+        if 'bin/lasso9' in self:
             rv += 0.8
-        if re.search(r'<\?lasso', text, re.I):
+        if re.search(r'<\?lasso', self, re.I):
             rv += 0.4
-        if re.search(r'local\(', text, re.I):
+        if re.search(r'local\(', self, re.I):
             rv += 0.4
         return rv
 
@@ -1004,11 +1018,8 @@ class ObjectiveJLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
-        if re.search(r'^\s*@import\s+[<"]', text, re.MULTILINE):
-            # special directive found in most Objective-J files
-            return True
-        return False
+    def analyse_text(self):
+        return bool(re.search(r'^\s*@import\s+[<"]', self, re.MULTILINE))
 
 
 class CoffeeScriptLexer(RegexLexer):

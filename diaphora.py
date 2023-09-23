@@ -106,11 +106,10 @@ logging.basicConfig(format=fmt, level=logging.INFO)
 def result_iter(cursor, arraysize=1000):
   """An iterator that uses fetchmany to keep memory usage down."""
   while True:
-    results = cursor.fetchmany(arraysize)
-    if not results:
+    if results := cursor.fetchmany(arraysize):
+      yield from results
+    else:
       break
-    for result in results:
-      yield result
 
 
 #-------------------------------------------------------------------------------
@@ -118,7 +117,7 @@ def quick_ratio(buf1, buf2):
   """
   Call SequenceMatcher.quick_ratio() to get a comparison ratio.
   """
-  if buf1 is None or buf2 is None or buf1 == "" or buf1 == "":
+  if buf1 is None or buf2 is None or buf1 == "":
     return 0
   seq = SequenceMatcher(None, buf1.split("\n"), buf2.split("\n"))
   return seq.quick_ratio()
@@ -129,7 +128,7 @@ def real_quick_ratio(buf1, buf2):
   """
   Call SequenceMatcher.real_quick_ratio() to get a comparison ratio.
   """
-  if buf1 is None or buf2 is None or buf1 == "" or buf1 == "":
+  if buf1 is None or buf2 is None or buf1 == "":
     return 0
   seq = SequenceMatcher(None, buf1.split("\n"), buf2.split("\n"))
   return seq.real_quick_ratio()
@@ -248,7 +247,7 @@ class CChooser:
     if self.title.startswith("Unmatched in"):
       self.items.append(["%05lu" % self.n, "%08x" % int(item.ea), item.vfname])
     else:
-      dec_vals = "%." + config.DECIMAL_VALUES
+      dec_vals = f"%.{config.DECIMAL_VALUES}"
       self.items.append(
         [
           "%05lu" % self.n,
@@ -334,7 +333,7 @@ class CBinDiff:
   """
 
   def __init__(self, db_name, chooser=CChooser):
-    self.names = dict()
+    self.names = {}
     self.primes = primes(2048 * 2048)
     self.db_name = db_name
     self.dbs_dict = {}
@@ -436,8 +435,7 @@ class CBinDiff:
 
     # Number of CPU threads/cores to use?
     cpus = cpu_count() - 1
-    if cpus < 1:
-      cpus = 1
+    cpus = max(cpus, 1)
     self.cpu_count = self.get_value_for("CPU_COUNT", cpus)
 
     # XXX: FIXME: Parallel diffing is broken outside of IDA due to parallelism problems
@@ -447,18 +445,19 @@ class CBinDiff:
     ####################################################################
 
   def __del__(self):
-    if self.db is not None:
-      try:
-        if self.last_diff_db is not None:
-          tid = threading.current_thread().ident
-          if tid in self.dbs_dict:
-            db = self.dbs_dict[tid]
-            with db.cursor() as cur:
-              cur.execute(f'detach "{self.last_diff_db}"')
-      except:
-        pass
+    if self.db is None:
+      return
+    try:
+      if self.last_diff_db is not None:
+        tid = threading.current_thread().ident
+        if tid in self.dbs_dict:
+          db = self.dbs_dict[tid]
+          with db.cursor() as cur:
+            cur.execute(f'detach "{self.last_diff_db}"')
+    except:
+      pass
 
-      self.db_close()
+    self.db_close()
 
   def refresh(self):
     """
@@ -654,9 +653,7 @@ class CBinDiff:
       sql = "select id from basic_blocks where address = ?"
       cur.execute(sql, (str(addr),))
       row = cur.fetchone()
-      rowid = None
-      if row is not None:
-        rowid = row["id"]
+      rowid = row["id"] if row is not None else None
     finally:
       cur.close()
 
@@ -706,9 +703,7 @@ class CBinDiff:
         if addr in self.pseudo_comments:
           pseudocomment, pseudoitp = self.pseudo_comments[addr]
 
-        instruction_properties.append(pseudocomment)
-        instruction_properties.append(pseudoitp)
-        instruction_properties.append(func_id)
+        instruction_properties.extend((pseudocomment, pseudoitp, func_id))
         cur.execute(sql, instruction_properties)
         db_id = cur.lastrowid
         instructions_ids[addr] = db_id
@@ -721,19 +716,16 @@ class CBinDiff:
     Insert basic blocks information as well as the relationship between assembly
     instructions and basic blocks.
     """
-    num = 0
     bb_ids = {}
     sql1 = "insert into main.basic_blocks (num, address, asm_type) values (?, ?, 'native')"
     sql2 = "insert into main.bb_instructions (basic_block_id, instruction_id) values (?, ?)"
 
     self_get_bb_id = self.get_bb_id
-    for key in bb_data:
-      # Insert each basic block
-      num += 1
+    for num, key in enumerate(bb_data, start=1):
       ins_ea = str(key)
       last_bb_id = self_get_bb_id(ins_ea)
       if last_bb_id is None:
-        cur_execute(sql1, (num, str(ins_ea)))
+        cur_execute(sql1, (num, ins_ea))
         last_bb_id = cur.lastrowid
       bb_ids[ins_ea] = last_bb_id
 
@@ -756,7 +748,7 @@ class CBinDiff:
 
     # And finally insert the functions to basic blocks relations
     sql = "insert into main.function_bblocks (function_id, basic_block_id, asm_type) values (?, ?, 'native')"
-    for key, bb_id in bb_ids.items():
+    for bb_id in bb_ids.values():
       cur_execute(sql, (func_id, bb_id))
 
   def save_microcode_instructions(
@@ -774,8 +766,7 @@ class CBinDiff:
       "insert into main.bb_relations (parent_id, child_id) values (?, ?)"
     )
     sql_func_blocks = "insert into main.function_bblocks (function_id, basic_block_id, asm_type) values (?, ?, 'microcode')"
-    num = 0
-    for key in microcode_bblocks:
+    for num, key in enumerate(microcode_bblocks):
       # Create a new microcode basic block
       start_ea = self.get_valid_prop(microcode_bblocks[key]["start"])
       cur_execute(sql_bblock, [num, start_ea])
@@ -810,9 +801,6 @@ class CBinDiff:
           # Add the microcode instrution to the current basic block
           cur_execute(sql_bbinst, (bblock_id, inst_id))
 
-      # Incrase the current basic block number
-      num += 1
-
     # And, finally, insert the relationships between basic blocks
     for node in microcode_bbrelations:
       parent_id = microcode_bblocks[node]["bblock_id"]
@@ -827,62 +815,61 @@ class CBinDiff:
     """
     Get a list ready to be used to insert rows from a given dictionary.
     """
-    list_dict = (
-      d["name"],
-      d["nodes"],
-      d["edges"],
-      d["indegree"],
-      d["outdegree"],
-      d["size"],
-      d["instructions"],
-      d["mnems"],
-      d["names"],
-      d["proto"],
-      d["cc"],
-      d["prime"],
-      d["f"],
-      d["comment"],
-      d["true_name"],
-      d["bytes_hash"],
-      d["pseudo"],
-      d["pseudo_lines"],
-      d["pseudo_hash1"],
-      d["pseudocode_primes"],
-      d["function_flags"],
-      d["asm"],
-      d["proto2"],
-      d["pseudo_hash2"],
-      d["pseudo_hash3"],
-      d["strongly_connected_size"],
-      d["loops"],
-      d["rva"],
-      d["bb_topological"],
-      d["strongly_connected_spp"],
-      d["clean_assembly"],
-      d["clean_pseudo"],
-      d["mnemonics_spp"],
-      d["switches"],
-      d["function_hash"],
-      d["bytes_sum"],
-      d["md_index"],
-      d["constants"],
-      d["constants_size"],
-      d["seg_rva"],
-      d["assembly_addrs"],
-      d["kgh_hash"],
-      d["source_file"],
-      d["userdata"],
-      d["microcode"],
-      d["clean_microcode"],
-      d["microcode_spp"],
-      d["microcode_bblocks"],
-      d["microcode_bbrelations"],
-      d["callers"],
-      d["callees"],
-      d["basic_blocks_data"],
-      d["bb_relations"],
+    return (
+        d["name"],
+        d["nodes"],
+        d["edges"],
+        d["indegree"],
+        d["outdegree"],
+        d["size"],
+        d["instructions"],
+        d["mnems"],
+        d["names"],
+        d["proto"],
+        d["cc"],
+        d["prime"],
+        d["f"],
+        d["comment"],
+        d["true_name"],
+        d["bytes_hash"],
+        d["pseudo"],
+        d["pseudo_lines"],
+        d["pseudo_hash1"],
+        d["pseudocode_primes"],
+        d["function_flags"],
+        d["asm"],
+        d["proto2"],
+        d["pseudo_hash2"],
+        d["pseudo_hash3"],
+        d["strongly_connected_size"],
+        d["loops"],
+        d["rva"],
+        d["bb_topological"],
+        d["strongly_connected_spp"],
+        d["clean_assembly"],
+        d["clean_pseudo"],
+        d["mnemonics_spp"],
+        d["switches"],
+        d["function_hash"],
+        d["bytes_sum"],
+        d["md_index"],
+        d["constants"],
+        d["constants_size"],
+        d["seg_rva"],
+        d["assembly_addrs"],
+        d["kgh_hash"],
+        d["source_file"],
+        d["userdata"],
+        d["microcode"],
+        d["clean_microcode"],
+        d["microcode_spp"],
+        d["microcode_bblocks"],
+        d["microcode_bbrelations"],
+        d["callers"],
+        d["callees"],
+        d["basic_blocks_data"],
+        d["bb_relations"],
     )
-    return list_dict
 
   # pylint: disable=redefined-outer-name
   def create_function_dictionary(self, list_dict):
@@ -944,62 +931,61 @@ class CBinDiff:
       basic_blocks_data,
       bb_relations,
     ) = list_dict
-    d = dict(
-      name=name,
-      nodes=nodes,
-      edges=edges,
-      indegree=indegree,
-      outdegree=outdegree,
-      size=size,
-      instructions=instructions,
-      mnems=mnems,
-      names=names,
-      proto=proto,
-      cc=cc,
-      prime=prime,
-      f=f,
-      comment=comment,
-      true_name=true_name,
-      bytes_hash=bytes_hash,
-      pseudo=pseudo,
-      pseudo_lines=pseudo_lines,
-      pseudo_hash1=pseudo_hash1,
-      pseudocode_primes=pseudocode_primes,
-      function_flags=function_flags,
-      asm=asm,
-      proto2=proto2,
-      pseudo_hash2=pseudo_hash2,
-      pseudo_hash3=pseudo_hash3,
-      strongly_connected_size=strongly_connected_size,
-      loops=loops,
-      rva=rva,
-      bb_topological=bb_topological,
-      strongly_connected_spp=strongly_connected_spp,
-      clean_assembly=clean_assembly,
-      clean_pseudo=clean_pseudo,
-      mnemonics_spp=mnemonics_spp,
-      switches=switches,
-      function_hash=function_hash,
-      bytes_sum=bytes_sum,
-      md_index=md_index,
-      constants=constants,
-      constants_size=constants_size,
-      seg_rva=seg_rva,
-      assembly_addrs=assembly_addrs,
-      kgh_hash=kgh_hash,
-      source_file=source_file,
-      callers=callers,
-      callees=callees,
-      basic_blocks_data=basic_blocks_data,
-      bb_relations=bb_relations,
-      microcode=microcode,
-      clean_microcode=clean_microcode,
-      microcode_bblocks=microcode_bblocks,
-      microcode_bbrelations=microcode_bbrelations,
-      microcode_spp=microcode_spp,
-      userdata=userdata,
+    return dict(
+        name=name,
+        nodes=nodes,
+        edges=edges,
+        indegree=indegree,
+        outdegree=outdegree,
+        size=size,
+        instructions=instructions,
+        mnems=mnems,
+        names=names,
+        proto=proto,
+        cc=cc,
+        prime=prime,
+        f=f,
+        comment=comment,
+        true_name=true_name,
+        bytes_hash=bytes_hash,
+        pseudo=pseudo,
+        pseudo_lines=pseudo_lines,
+        pseudo_hash1=pseudo_hash1,
+        pseudocode_primes=pseudocode_primes,
+        function_flags=function_flags,
+        asm=asm,
+        proto2=proto2,
+        pseudo_hash2=pseudo_hash2,
+        pseudo_hash3=pseudo_hash3,
+        strongly_connected_size=strongly_connected_size,
+        loops=loops,
+        rva=rva,
+        bb_topological=bb_topological,
+        strongly_connected_spp=strongly_connected_spp,
+        clean_assembly=clean_assembly,
+        clean_pseudo=clean_pseudo,
+        mnemonics_spp=mnemonics_spp,
+        switches=switches,
+        function_hash=function_hash,
+        bytes_sum=bytes_sum,
+        md_index=md_index,
+        constants=constants,
+        constants_size=constants_size,
+        seg_rva=seg_rva,
+        assembly_addrs=assembly_addrs,
+        kgh_hash=kgh_hash,
+        source_file=source_file,
+        callers=callers,
+        callees=callees,
+        basic_blocks_data=basic_blocks_data,
+        bb_relations=bb_relations,
+        microcode=microcode,
+        clean_microcode=clean_microcode,
+        microcode_bblocks=microcode_bblocks,
+        microcode_bbrelations=microcode_bbrelations,
+        microcode_spp=microcode_spp,
+        userdata=userdata,
     )
-    return d
   # pylint: enable=redefined-outer-name
 
   def save_function_to_database(self, props, cur, func_id):
@@ -1159,7 +1145,7 @@ class CBinDiff:
 
     # Now, replace sub_, byte_, word_, dword_, loc_, etc...
     for rep in config.CLEANING_CMP_REPS:
-      tmp = self.re_sub(rep + "[a-f0-9A-F]+", rep + "XXXX", tmp)
+      tmp = self.re_sub(f"{rep}[a-f0-9A-F]+", f"{rep}XXXX", tmp)
     tmp = self.re_sub("v[0-9]+", "vXXX", tmp)
     tmp = self.re_sub("a[0-9]+", "aXXX", tmp)
     tmp = self.re_sub("arg_[0-9]+", "aXXX", tmp)
@@ -1178,11 +1164,11 @@ class CBinDiff:
     tmp = tmp.split(" # ")[0]
     # Now, replace sub_, byte_, word_, dword_, loc_, etc...
     for rep in config.CLEANING_CMP_REPS:
-      tmp = self.re_sub(rep + "[a-f0-9A-F]+", "XXXX", tmp)
+      tmp = self.re_sub(f"{rep}[a-f0-9A-F]+", "XXXX", tmp)
 
     # Remove dword ptr, byte ptr, etc...
     for rep in config.CLEANING_CMP_REMS:
-      tmp = self.re_sub(rep + "[a-f0-9A-F]+", "", tmp)
+      tmp = self.re_sub(f"{rep}[a-f0-9A-F]+", "", tmp)
 
     reps = [r"\+[a-f0-9A-F]+h\+"]
     for rep in reps:
@@ -1266,17 +1252,11 @@ class CBinDiff:
     """
     Compare two graphs (check `graph_diff` in diaphora_ida.py)
     """
-    colours1 = {}
-    colours2 = {}
     bblocks1 = g1[0]
     bblocks2 = g2[0]
 
-    # Consider, by default, all blocks added, news
-    for key1 in bblocks1:
-      colours1[key1] = config.GRAPH_BBLOCK_MATCH_NONE
-    for key2 in bblocks2:
-      colours2[key2] = config.GRAPH_BBLOCK_MATCH_NONE
-
+    colours1 = {key1: config.GRAPH_BBLOCK_MATCH_NONE for key1 in bblocks1}
+    colours2 = {key2: config.GRAPH_BBLOCK_MATCH_NONE for key2 in bblocks2}
     colours1, colours2 = self.compare_graphs_pass(
       bblocks1, bblocks2, colours1, colours2, False
     )
@@ -1289,10 +1269,7 @@ class CBinDiff:
     """
     Get the graph representation of the function at address @ea1
     """
-    db = "diff"
-    if primary:
-      db = "main"
-
+    db = "main" if primary else "diff"
     cur = self.db_cursor()
     dones = set()
     bb_blocks = {}
@@ -1362,7 +1339,7 @@ class CBinDiff:
         try:
           bb_relations[bb_ea1].add(bb_ea2)
         except KeyError:
-          bb_relations[bb_ea1] = set([bb_ea2])
+          bb_relations[bb_ea1] = {bb_ea2}
     finally:
       cur.close()
 
@@ -1382,10 +1359,7 @@ class CBinDiff:
     """
     Check if the function name looks like an IDA's auto-generated one
     """
-    for rep in config.CLEANING_CMP_REPS:
-      if name.startswith(rep):
-        return True
-    return False
+    return any(name.startswith(rep) for rep in config.CLEANING_CMP_REPS)
 
   def get_callgraph_difference(self):
     """
@@ -1398,30 +1372,25 @@ class CBinDiff:
         select callgraph_primes, callgraph_all_primes from diff.program"""
       cur.execute(sql)
       rows = cur.fetchall()
-      if len(rows) == 2:
-        cg1 = decimal.Decimal(rows[0]["callgraph_primes"])
-        cg_factors1 = json.loads(rows[0]["callgraph_all_primes"])
-        cg2 = decimal.Decimal(rows[1]["callgraph_primes"])
-        cg_factors2 = json.loads(rows[1]["callgraph_all_primes"])
-
-        if cg1 == cg2:
-          self.equal_callgraph = True
-          msg = "Call graph signature for both databases is equal, the programs seem to be 100% equal structurally"
-          log(msg)
-          Warning(msg)
-          return 0
-        else:
-          FACTORS_CACHE[cg1] = cg_factors1
-          FACTORS_CACHE[cg2] = cg_factors2
-          diff = difference(cg1, cg2)
-          total = sum(cg_factors1.values())
-          if total == 0 or diff == 0:
-            return 0
-          else:
-            percent = diff * 100.0 / total
-            return percent
-      else:
+      if len(rows) != 2:
         raise Exception(f"Not enough rows in databases! Size is {len(rows)}")
+      cg1 = decimal.Decimal(rows[0]["callgraph_primes"])
+      cg_factors1 = json.loads(rows[0]["callgraph_all_primes"])
+      cg2 = decimal.Decimal(rows[1]["callgraph_primes"])
+      cg_factors2 = json.loads(rows[1]["callgraph_all_primes"])
+
+      if cg1 == cg2:
+        self.equal_callgraph = True
+        msg = "Call graph signature for both databases is equal, the programs seem to be 100% equal structurally"
+        log(msg)
+        Warning(msg)
+        return 0
+      else:
+        FACTORS_CACHE[cg1] = cg_factors1
+        FACTORS_CACHE[cg2] = cg_factors2
+        diff = difference(cg1, cg2)
+        total = sum(cg_factors1.values())
+        return 0 if total == 0 or diff == 0 else diff * 100.0 / total
     finally:
       cur.close()
 

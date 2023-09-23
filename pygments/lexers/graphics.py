@@ -8,6 +8,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 from pygments.lexer import RegexLexer, words, include, bygroups, using, \
     this, default
 from pygments.token import Text, Comment, Operator, Keyword, Name, \
@@ -302,6 +303,8 @@ class HLSLShaderLexer(RegexLexer):
     }
 
 
+
+
 class PostScriptLexer(RegexLexer):
     """
     Lexer for PostScript files.
@@ -315,81 +318,161 @@ class PostScriptLexer(RegexLexer):
     mimetypes = ['application/postscript']
 
     delimiter = r'()<>\[\]{}/%\s'
-    delimiter_end = r'(?=[%s])' % delimiter
-
-    valid_name_chars = r'[^%s]' % delimiter
-    valid_name = r"%s+%s" % (valid_name_chars, delimiter_end)
+    valid_name_chars = f'[^{delimiter}]'
+    delimiter_end = f'(?=[{delimiter}])'
+    valid_name = f"{valid_name_chars}+{delimiter_end}"
 
     tokens = {
         'root': [
-            # All comment types
             (r'^%!.+$', Comment.Preproc),
             (r'%%.*$', Comment.Special),
             (r'(^%.*\n){2,}', Comment.Multiline),
             (r'%.*$', Comment.Single),
-
-            # String literals are awkward; enter separate state.
             (r'\(', String, 'stringliteral'),
-
             (r'[{}<>\[\]]', Punctuation),
-
-            # Numbers
-            (r'<[0-9A-Fa-f]+>' + delimiter_end, Number.Hex),
-            # Slight abuse: use Oct to signify any explicit base system
-            (r'[0-9]+\#(\-|\+)?([0-9]+\.?|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)'
-             r'((e|E)[0-9]+)?' + delimiter_end, Number.Oct),
-            (r'(\-|\+)?([0-9]+\.?|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)((e|E)[0-9]+)?'
-             + delimiter_end, Number.Float),
+            (f'<[0-9A-Fa-f]+>{delimiter_end}', Number.Hex),
+            (
+                r'[0-9]+\#(\-|\+)?([0-9]+\.?|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)'
+                r'((e|E)[0-9]+)?' + delimiter_end,
+                Number.Oct,
+            ),
+            (
+                r'(\-|\+)?([0-9]+\.?|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)((e|E)[0-9]+)?'
+                + delimiter_end,
+                Number.Float,
+            ),
             (r'(\-|\+)?[0-9]+' + delimiter_end, Number.Integer),
-
-            # References
             (r'\/%s' % valid_name, Name.Variable),
-
-            # Names
-            (valid_name, Name.Function),      # Anything else is executed
-
-            # These keywords taken from
-            # <http://www.math.ubc.ca/~cass/graphics/manual/pdf/a1.pdf>
-            # Is there an authoritative list anywhere that doesn't involve
-            # trawling documentation?
-
-            (r'(false|true)' + delimiter_end, Keyword.Constant),
-
-            # Conditionals / flow control
-            (r'(eq|ne|g[et]|l[et]|and|or|not|if(?:else)?|for(?:all)?)'
-             + delimiter_end, Keyword.Reserved),
-
-            (words((
-                'abs', 'add', 'aload', 'arc', 'arcn', 'array', 'atan', 'begin',
-                'bind', 'ceiling', 'charpath', 'clip', 'closepath', 'concat',
-                'concatmatrix', 'copy', 'cos', 'currentlinewidth', 'currentmatrix',
-                'currentpoint', 'curveto', 'cvi', 'cvs', 'def', 'defaultmatrix',
-                'dict', 'dictstackoverflow', 'div', 'dtransform', 'dup', 'end',
-                'exch', 'exec', 'exit', 'exp', 'fill', 'findfont', 'floor', 'get',
-                'getinterval', 'grestore', 'gsave', 'gt', 'identmatrix', 'idiv',
-                'idtransform', 'index', 'invertmatrix', 'itransform', 'length',
-                'lineto', 'ln', 'load', 'log', 'loop', 'matrix', 'mod', 'moveto',
-                'mul', 'neg', 'newpath', 'pathforall', 'pathbbox', 'pop', 'print',
-                'pstack', 'put', 'quit', 'rand', 'rangecheck', 'rcurveto', 'repeat',
-                'restore', 'rlineto', 'rmoveto', 'roll', 'rotate', 'round', 'run',
-                'save', 'scale', 'scalefont', 'setdash', 'setfont', 'setgray',
-                'setlinecap', 'setlinejoin', 'setlinewidth', 'setmatrix',
-                'setrgbcolor', 'shfill', 'show', 'showpage', 'sin', 'sqrt',
-                'stack', 'stringwidth', 'stroke', 'strokepath', 'sub', 'syntaxerror',
-                'transform', 'translate', 'truncate', 'typecheck', 'undefined',
-                'undefinedfilename', 'undefinedresult'), suffix=delimiter_end),
-             Name.Builtin),
-
+            (valid_name, Name.Function),
+            (f'(false|true){delimiter_end}', Keyword.Constant),
+            (
+                f'(eq|ne|g[et]|l[et]|and|or|not|if(?:else)?|for(?:all)?){delimiter_end}',
+                Keyword.Reserved,
+            ),
+            (
+                words(
+                    (
+                        'abs',
+                        'add',
+                        'aload',
+                        'arc',
+                        'arcn',
+                        'array',
+                        'atan',
+                        'begin',
+                        'bind',
+                        'ceiling',
+                        'charpath',
+                        'clip',
+                        'closepath',
+                        'concat',
+                        'concatmatrix',
+                        'copy',
+                        'cos',
+                        'currentlinewidth',
+                        'currentmatrix',
+                        'currentpoint',
+                        'curveto',
+                        'cvi',
+                        'cvs',
+                        'def',
+                        'defaultmatrix',
+                        'dict',
+                        'dictstackoverflow',
+                        'div',
+                        'dtransform',
+                        'dup',
+                        'end',
+                        'exch',
+                        'exec',
+                        'exit',
+                        'exp',
+                        'fill',
+                        'findfont',
+                        'floor',
+                        'get',
+                        'getinterval',
+                        'grestore',
+                        'gsave',
+                        'gt',
+                        'identmatrix',
+                        'idiv',
+                        'idtransform',
+                        'index',
+                        'invertmatrix',
+                        'itransform',
+                        'length',
+                        'lineto',
+                        'ln',
+                        'load',
+                        'log',
+                        'loop',
+                        'matrix',
+                        'mod',
+                        'moveto',
+                        'mul',
+                        'neg',
+                        'newpath',
+                        'pathforall',
+                        'pathbbox',
+                        'pop',
+                        'print',
+                        'pstack',
+                        'put',
+                        'quit',
+                        'rand',
+                        'rangecheck',
+                        'rcurveto',
+                        'repeat',
+                        'restore',
+                        'rlineto',
+                        'rmoveto',
+                        'roll',
+                        'rotate',
+                        'round',
+                        'run',
+                        'save',
+                        'scale',
+                        'scalefont',
+                        'setdash',
+                        'setfont',
+                        'setgray',
+                        'setlinecap',
+                        'setlinejoin',
+                        'setlinewidth',
+                        'setmatrix',
+                        'setrgbcolor',
+                        'shfill',
+                        'show',
+                        'showpage',
+                        'sin',
+                        'sqrt',
+                        'stack',
+                        'stringwidth',
+                        'stroke',
+                        'strokepath',
+                        'sub',
+                        'syntaxerror',
+                        'transform',
+                        'translate',
+                        'truncate',
+                        'typecheck',
+                        'undefined',
+                        'undefinedfilename',
+                        'undefinedresult',
+                    ),
+                    suffix=delimiter_end,
+                ),
+                Name.Builtin,
+            ),
             (r'\s+', Whitespace),
         ],
-
         'stringliteral': [
             (r'[^()\\]+', String),
             (r'\\', String.Escape, 'escape'),
             (r'\(', String, '#push'),
             (r'\)', String, '#pop'),
         ],
-
         'escape': [
             (r'[0-8]{3}|n|r|t|b|f|\\|\(|\)', String.Escape, '#pop'),
             default('#pop'),
@@ -777,7 +860,7 @@ class PovrayLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """POVRAY is similar to JSON/C, but the combination of camera and
         light_source is probably not very likely elsewhere. HLSL or GLSL
         are similar (GLSL even has #version), but they miss #declare, and
@@ -785,13 +868,13 @@ class PovrayLexer(RegexLexer):
         to assume though that any POVRAY scene must have a camera and
         lightsource."""
         result = 0
-        if '#version' in text:
+        if '#version' in self:
             result += 0.05
-        if '#declare' in text:
+        if '#declare' in self:
             result += 0.05
-        if 'camera' in text:
+        if 'camera' in self:
             result += 0.05
-        if 'light_source' in text:
+        if 'light_source' in self:
             result += 0.1
 
         return result

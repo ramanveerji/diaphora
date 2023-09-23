@@ -79,7 +79,7 @@ class HaxeLexer(ExtendedRegexLexer):
         if proc in ['error']:
             ctx.stack.append('preproc-error')
 
-        yield match.start(), Comment.Preproc, '#' + proc
+        yield (match.start(), Comment.Preproc, f'#{proc}')
         ctx.pos = match.end()
 
     tokens = {
@@ -890,8 +890,8 @@ class HaxeLexer(ExtendedRegexLexer):
 
     }
 
-    def analyse_text(text):
-        if re.match(r'\w+\s*:\s*\w', text):
+    def analyse_text(self):
+        if re.match(r'\w+\s*:\s*\w', self):
             return 0.3
 
 

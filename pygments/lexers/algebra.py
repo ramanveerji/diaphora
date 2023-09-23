@@ -68,20 +68,22 @@ class GAPLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         score = 0.0
 
         # Declaration part
         if re.search(
-            r"(InstallTrueMethod|Declare(Attribute|Category|Filter|Operation" +
-            r"|GlobalFunction|Synonym|SynonymAttr|Property))", text
+            r"(InstallTrueMethod|Declare(Attribute|Category|Filter|Operation"
+            + r"|GlobalFunction|Synonym|SynonymAttr|Property))",
+            self,
         ):
             score += 0.7
 
         # Implementation part
         if re.search(
-            r"(DeclareRepresentation|Install(GlobalFunction|Method|" +
-            r"ImmediateMethod|OtherMethod)|New(Family|Type)|Objectify)", text
+            r"(DeclareRepresentation|Install(GlobalFunction|Method|"
+            + r"ImmediateMethod|OtherMethod)|New(Family|Type)|Objectify)",
+            self,
         ):
             score += 0.7
 
@@ -112,8 +114,8 @@ class MathematicaLexer(RegexLexer):
 
     punctuation = (",", ";", "(", ")", "[", "]", "{", "}")
 
-    def _multi_escape(entries):
-        return '(%s)' % ('|'.join(re.escape(entry) for entry in entries))
+    def _multi_escape(self):
+        return f"({'|'.join(re.escape(entry) for entry in entries)})"
 
     tokens = {
         'root': [

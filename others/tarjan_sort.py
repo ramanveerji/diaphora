@@ -50,25 +50,23 @@ def strongly_connected_components(graph):
 
 
 def topological_sort(graph):
-    count = { }
-    for node in graph:
-        count[node] = 0
+    count = {node: 0 for node in graph}
     for node in graph:
         for successor in graph[node]:
             count[successor] += 1
 
     ready = [ node for node in graph if count[node] == 0 ]
-    
+
     result = [ ]
     while ready:
         node = ready.pop(-1)
         result.append(node)
-        
+
         for successor in graph[node]:
             count[successor] -= 1
             if count[successor] == 0:
                 ready.append(successor)
-    
+
     return result
 
 
@@ -83,10 +81,7 @@ def robust_topological_sort(graph):
         for node in component:
             node_component[node] = component
 
-    component_graph = { }
-    for component in components:
-        component_graph[component] = [ ]
-    
+    component_graph = {component: [ ] for component in components}
     for node in graph:
         node_c = node_component[node]
         for successor in graph[node]:

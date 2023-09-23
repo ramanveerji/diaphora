@@ -8,6 +8,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 import re
 
 from pygments.lexer import RegexLexer, bygroups, default, words, include
@@ -18,6 +19,8 @@ from pygments.lexers import _vbscript_builtins
 
 __all__ = ['BlitzBasicLexer', 'BlitzMaxLexer', 'MonkeyLexer', 'CbmBasicV2Lexer',
            'QBasicLexer', 'VBScriptLexer', 'BBCBasicLexer']
+
+
 
 
 class BlitzMaxLexer(RegexLexer):
@@ -45,64 +48,169 @@ class BlitzMaxLexer(RegexLexer):
     flags = re.MULTILINE | re.IGNORECASE
     tokens = {
         'root': [
-            # Text
             (r'\s+', Whitespace),
-            (r'(\.\.)(\n)', bygroups(Text, Whitespace)),  # Line continuation
-            # Comments
+            (r'(\.\.)(\n)', bygroups(Text, Whitespace)),
             (r"'.*?\n", Comment.Single),
             (r'([ \t]*)\bRem\n(\n|.)*?\s*\bEnd([ \t]*)Rem', Comment.Multiline),
-            # Data types
             ('"', String.Double, 'string'),
-            # Numbers
             (r'[0-9]+\.[0-9]*(?!\.)', Number.Float),
             (r'\.[0-9]*(?!\.)', Number.Float),
             (r'[0-9]+', Number.Integer),
             (r'\$[0-9a-f]+', Number.Hex),
             (r'\%[10]+', Number.Bin),
-            # Other
-            (r'(?:(?:(:)?([ \t]*)(:?%s|([+\-*/&|~]))|Or|And|Not|[=<>^]))' %
-             (bmax_vopwords), Operator),
+            (
+                r'(?:(?:(:)?([ \t]*)(:?%s|([+\-*/&|~]))|Or|And|Not|[=<>^]))'
+                % (bmax_vopwords),
+                Operator,
+            ),
             (r'[(),.:\[\]]', Punctuation),
             (r'(?:#[\w \t]*)', Name.Label),
             (r'(?:\?[\w \t]*)', Comment.Preproc),
-            # Identifiers
-            (r'\b(New)\b([ \t]?)([(]?)(%s)' % (bmax_name),
-             bygroups(Keyword.Reserved, Whitespace, Punctuation, Name.Class)),
-            (r'\b(Import|Framework|Module)([ \t]+)(%s\.%s)' %
-             (bmax_name, bmax_name),
-             bygroups(Keyword.Reserved, Whitespace, Keyword.Namespace)),
-            (bmax_func, bygroups(Name.Function, Whitespace, Keyword.Type,
-                                 Operator, Whitespace, Punctuation, Whitespace,
-                                 Keyword.Type, Name.Class, Whitespace,
-                                 Keyword.Type, Whitespace, Punctuation)),
-            (bmax_var, bygroups(Name.Variable, Whitespace, Keyword.Type, Operator,
-                                Whitespace, Punctuation, Whitespace, Keyword.Type,
-                                Name.Class, Whitespace, Keyword.Type)),
-            (r'\b(Type|Extends)([ \t]+)(%s)' % (bmax_name),
-             bygroups(Keyword.Reserved, Whitespace, Name.Class)),
-            # Keywords
+            (
+                r'\b(New)\b([ \t]?)([(]?)(%s)' % (bmax_name),
+                bygroups(
+                    Keyword.Reserved, Whitespace, Punctuation, Name.Class
+                ),
+            ),
+            (
+                r'\b(Import|Framework|Module)([ \t]+)(%s\.%s)'
+                % (bmax_name, bmax_name),
+                bygroups(Keyword.Reserved, Whitespace, Keyword.Namespace),
+            ),
+            (
+                bmax_func,
+                bygroups(
+                    Name.Function,
+                    Whitespace,
+                    Keyword.Type,
+                    Operator,
+                    Whitespace,
+                    Punctuation,
+                    Whitespace,
+                    Keyword.Type,
+                    Name.Class,
+                    Whitespace,
+                    Keyword.Type,
+                    Whitespace,
+                    Punctuation,
+                ),
+            ),
+            (
+                bmax_var,
+                bygroups(
+                    Name.Variable,
+                    Whitespace,
+                    Keyword.Type,
+                    Operator,
+                    Whitespace,
+                    Punctuation,
+                    Whitespace,
+                    Keyword.Type,
+                    Name.Class,
+                    Whitespace,
+                    Keyword.Type,
+                ),
+            ),
+            (
+                r'\b(Type|Extends)([ \t]+)(%s)' % (bmax_name),
+                bygroups(Keyword.Reserved, Whitespace, Name.Class),
+            ),
             (r'\b(Ptr)\b', Keyword.Type),
             (r'\b(Pi|True|False|Null|Self|Super)\b', Keyword.Constant),
             (r'\b(Local|Global|Const|Field)\b', Keyword.Declaration),
-            (words((
-                'TNullMethodException', 'TNullFunctionException',
-                'TNullObjectException', 'TArrayBoundsException',
-                'TRuntimeException'), prefix=r'\b', suffix=r'\b'), Name.Exception),
-            (words((
-                'Strict', 'SuperStrict', 'Module', 'ModuleInfo',
-                'End', 'Return', 'Continue', 'Exit', 'Public', 'Private',
-                'Var', 'VarPtr', 'Chr', 'Len', 'Asc', 'SizeOf', 'Sgn', 'Abs', 'Min', 'Max',
-                'New', 'Release', 'Delete', 'Incbin', 'IncbinPtr', 'IncbinLen',
-                'Framework', 'Include', 'Import', 'Extern', 'EndExtern',
-                'Function', 'EndFunction', 'Type', 'EndType', 'Extends', 'Method', 'EndMethod',
-                'Abstract', 'Final', 'If', 'Then', 'Else', 'ElseIf', 'EndIf',
-                'For', 'To', 'Next', 'Step', 'EachIn', 'While', 'Wend', 'EndWhile',
-                'Repeat', 'Until', 'Forever', 'Select', 'Case', 'Default', 'EndSelect',
-                'Try', 'Catch', 'EndTry', 'Throw', 'Assert', 'Goto', 'DefData', 'ReadData',
-                'RestoreData'), prefix=r'\b', suffix=r'\b'),
-             Keyword.Reserved),
-            # Final resolve (for variable names and such)
-            (r'(%s)' % (bmax_name), Name.Variable),
+            (
+                words(
+                    (
+                        'TNullMethodException',
+                        'TNullFunctionException',
+                        'TNullObjectException',
+                        'TArrayBoundsException',
+                        'TRuntimeException',
+                    ),
+                    prefix=r'\b',
+                    suffix=r'\b',
+                ),
+                Name.Exception,
+            ),
+            (
+                words(
+                    (
+                        'Strict',
+                        'SuperStrict',
+                        'Module',
+                        'ModuleInfo',
+                        'End',
+                        'Return',
+                        'Continue',
+                        'Exit',
+                        'Public',
+                        'Private',
+                        'Var',
+                        'VarPtr',
+                        'Chr',
+                        'Len',
+                        'Asc',
+                        'SizeOf',
+                        'Sgn',
+                        'Abs',
+                        'Min',
+                        'Max',
+                        'New',
+                        'Release',
+                        'Delete',
+                        'Incbin',
+                        'IncbinPtr',
+                        'IncbinLen',
+                        'Framework',
+                        'Include',
+                        'Import',
+                        'Extern',
+                        'EndExtern',
+                        'Function',
+                        'EndFunction',
+                        'Type',
+                        'EndType',
+                        'Extends',
+                        'Method',
+                        'EndMethod',
+                        'Abstract',
+                        'Final',
+                        'If',
+                        'Then',
+                        'Else',
+                        'ElseIf',
+                        'EndIf',
+                        'For',
+                        'To',
+                        'Next',
+                        'Step',
+                        'EachIn',
+                        'While',
+                        'Wend',
+                        'EndWhile',
+                        'Repeat',
+                        'Until',
+                        'Forever',
+                        'Select',
+                        'Case',
+                        'Default',
+                        'EndSelect',
+                        'Try',
+                        'Catch',
+                        'EndTry',
+                        'Throw',
+                        'Assert',
+                        'Goto',
+                        'DefData',
+                        'ReadData',
+                        'RestoreData',
+                    ),
+                    prefix=r'\b',
+                    suffix=r'\b',
+                ),
+                Keyword.Reserved,
+            ),
+            (f'({bmax_name})', Name.Variable),
         ],
         'string': [
             (r'""', String.Double),
@@ -110,6 +218,7 @@ class BlitzMaxLexer(RegexLexer):
             (r'[^"]+', String.Double),
         ],
     }
+
 
 
 class BlitzBasicLexer(RegexLexer):
@@ -192,6 +301,8 @@ class BlitzBasicLexer(RegexLexer):
     }
 
 
+
+
 class MonkeyLexer(RegexLexer):
     """
     For
@@ -226,7 +337,10 @@ class MonkeyLexer(RegexLexer):
             (r"'.*", Comment),
             (r'(?i)^#rem\b', Comment.Multiline, 'comment'),
             # preprocessor directives
-            (r'(?i)^(?:#If|#ElseIf|#Else|#EndIf|#End|#Print|#Error)\b', Comment.Preproc),
+            (
+                r'(?i)^(?:#If|#ElseIf|#Else|#EndIf|#End|#Print|#Error)\b',
+                Comment.Preproc,
+            ),
             # preprocessor variable (any line starting with '#' that is not a directive)
             (r'^#', Comment.Preproc, 'variables'),
             # String
@@ -247,24 +361,43 @@ class MonkeyLexer(RegexLexer):
             (r'(?i)\b(?:Self|Super)\b', Name.Builtin.Pseudo),
             (r'\b(?:HOST|LANG|TARGET|CONFIG)\b', Name.Constant),
             # Keywords
-            (r'(?i)^(Import)(\s+)(.*)(\n)',
-             bygroups(Keyword.Namespace, Whitespace, Name.Namespace, Whitespace)),
+            (
+                r'(?i)^(Import)(\s+)(.*)(\n)',
+                bygroups(
+                    Keyword.Namespace, Whitespace, Name.Namespace, Whitespace
+                ),
+            ),
             (r'(?i)^Strict\b.*\n', Keyword.Reserved),
-            (r'(?i)(Const|Local|Global|Field)(\s+)',
-             bygroups(Keyword.Declaration, Whitespace), 'variables'),
-            (r'(?i)(New|Class|Interface|Extends|Implements)(\s+)',
-             bygroups(Keyword.Reserved, Whitespace), 'classname'),
-            (r'(?i)(Function|Method)(\s+)',
-             bygroups(Keyword.Reserved, Whitespace), 'funcname'),
-            (r'(?i)(?:End|Return|Public|Private|Extern|Property|'
-             r'Final|Abstract)\b', Keyword.Reserved),
+            (
+                r'(?i)(Const|Local|Global|Field)(\s+)',
+                bygroups(Keyword.Declaration, Whitespace),
+                'variables',
+            ),
+            (
+                r'(?i)(New|Class|Interface|Extends|Implements)(\s+)',
+                bygroups(Keyword.Reserved, Whitespace),
+                'classname',
+            ),
+            (
+                r'(?i)(Function|Method)(\s+)',
+                bygroups(Keyword.Reserved, Whitespace),
+                'funcname',
+            ),
+            (
+                r'(?i)(?:End|Return|Public|Private|Extern|Property|'
+                r'Final|Abstract)\b',
+                Keyword.Reserved,
+            ),
             # Flow Control stuff
-            (r'(?i)(?:If|Then|Else|ElseIf|EndIf|'
-             r'Select|Case|Default|'
-             r'While|Wend|'
-             r'Repeat|Until|Forever|'
-             r'For|To|Until|Step|EachIn|Next|'
-             r'Exit|Continue)(?=\s)', Keyword.Reserved),
+            (
+                r'(?i)(?:If|Then|Else|ElseIf|EndIf|'
+                r'Select|Case|Default|'
+                r'While|Wend|'
+                r'Repeat|Until|Forever|'
+                r'For|To|Until|Step|EachIn|Next|'
+                r'Exit|Continue)(?=\s)',
+                Keyword.Reserved,
+            ),
             # not used yet
             (r'(?i)\b(?:Module|Inline)\b', Keyword.Reserved),
             # Array
@@ -283,30 +416,38 @@ class MonkeyLexer(RegexLexer):
             (r':', Punctuation, 'classname'),
             (r'\s+', Whitespace),
             (r'\(', Punctuation, 'variables'),
-            (r'\)', Punctuation, '#pop')
+            (r'\)', Punctuation, '#pop'),
         ],
         'classname': [
             (r'%s\.' % name_module, Name.Namespace),
             (r'%s\b' % keyword_type, Keyword.Type),
             (r'%s\b' % name_class, Name.Class),
             # array (of given size)
-            (r'(\[)(\s*)(\d*)(\s*)(\])',
-             bygroups(Punctuation, Whitespace, Number.Integer, Whitespace, Punctuation)),
+            (
+                r'(\[)(\s*)(\d*)(\s*)(\])',
+                bygroups(
+                    Punctuation,
+                    Whitespace,
+                    Number.Integer,
+                    Whitespace,
+                    Punctuation,
+                ),
+            ),
             # generics
             (r'\s+(?!<)', Whitespace, '#pop'),
             (r'<', Punctuation, '#push'),
             (r'>', Punctuation, '#pop'),
             (r'\n', Whitespace, '#pop'),
-            default('#pop')
+            default('#pop'),
         ],
         'variables': [
             (r'%s\b' % name_constant, Name.Constant),
             (r'%s\b' % name_variable, Name.Variable),
-            (r'%s' % keyword_type_special, Keyword.Type),
+            (f'{keyword_type_special}', Keyword.Type),
             (r'\s+', Whitespace),
             (r':', Punctuation, 'classname'),
             (r',', Punctuation, '#push'),
-            default('#pop')
+            default('#pop'),
         ],
         'string': [
             (r'[^"~]+', String.Double),
@@ -353,10 +494,10 @@ class CbmBasicV2Lexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         # if it starts with a line number, it shouldn't be a "modern" Basic
         # like VB.net
-        if re.match(r'^\d+', text):
+        if re.match(r'^\d+', self):
             return 0.2
 
 
@@ -498,8 +639,8 @@ class QBasicLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        if '$DYNAMIC' in text or '$STATIC' in text:
+    def analyse_text(self):
+        if '$DYNAMIC' in self or '$STATIC' in self:
             return 0.9
 
 
@@ -658,6 +799,6 @@ class BBCBasicLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        if text.startswith('10REM >') or text.startswith('REM >'):
+    def analyse_text(self):
+        if self.startswith('10REM >') or self.startswith('REM >'):
             return 0.9

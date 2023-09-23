@@ -40,12 +40,12 @@ class DiffLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
-        if text[:7] == 'Index: ':
+    def analyse_text(self):
+        if self[:7] == 'Index: ':
             return True
-        if text[:5] == 'diff ':
+        if self[:5] == 'diff ':
             return True
-        if text[:4] == '--- ':
+        if self[:4] == '--- ':
             return 0.9
 
 

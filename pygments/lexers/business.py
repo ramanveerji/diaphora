@@ -499,17 +499,17 @@ class OpenEdgeLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """Try to identify OpenEdge ABL based on a few common constructs."""
         result = 0
 
-        if 'END.' in text:
+        if 'END.' in self:
             result += 0.05
 
-        if 'END PROCEDURE.' in text:
+        if 'END PROCEDURE.' in self:
             result += 0.05
 
-        if 'ELSE DO:' in text:
+        if 'ELSE DO:' in self:
             result += 0.05
 
         return result

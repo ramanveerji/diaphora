@@ -66,18 +66,15 @@ def get_query_fields(heur, quote=True):
   val = heur
   if quote:
     val = repr(val)
-  ret = SELECT_FIELDS.format(heur=val)
-  return ret
+  return SELECT_FIELDS.format(heur=val)
 
 #-------------------------------------------------------------------------------
-HEURISTICS = []
-
 NAME = "Same RVA and hash"
-HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_NO_FPS,
-  "sql":""" select """ + get_query_fields(NAME) + """
+HEURISTICS = [{
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_NO_FPS,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where (df.rva = f.rva
@@ -89,15 +86,14 @@ HEURISTICS.append({
                and f.nodes >= 3
                and df.nodes >= 3
                %POSTFIX%""",
-  "flags":[HEUR_FLAG_SAME_CPU]
-})
-
+    "flags": [HEUR_FLAG_SAME_CPU],
+}]
 NAME = "Same order and hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_NO_FPS,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_NO_FPS,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where df.id = f.id
@@ -109,15 +105,15 @@ HEURISTICS.append({
                  and f.instructions > 5 and df.instructions > 5)
                   or f.instructions > 10 and df.instructions > 10)
                %POSTFIX%""",
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 NAME = "Function Hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_NO_FPS,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_NO_FPS,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where f.function_hash = df.function_hash 
@@ -125,29 +121,29 @@ HEURISTICS.append({
                  and f.instructions > 5 and df.instructions > 5)
                   or f.instructions > 10 and df.instructions > 10)
                %POSTFIX%""",
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 NAME = "Bytes hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_NO_FPS,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_NO_FPS,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where f.bytes_hash = df.bytes_hash
                and f.instructions > 5 and df.instructions > 5
                %POSTFIX%""",
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 NAME = "Same address and mnemonics"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where df.address = f.address
@@ -158,15 +154,15 @@ HEURISTICS.append({
                  or (substr(f.name, 1, 4) = 'sub_' or substr(df.name, 1, 4) = 'sub_'))
                %POSTFIX%
              order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Same cleaned assembly"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.clean_assembly = df.clean_assembly
@@ -175,15 +171,15 @@ HEURISTICS.append({
          and df.name not like 'nullsub%'
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 NAME = "Same cleaned microcode"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.clean_microcode = df.clean_microcode
@@ -192,15 +188,15 @@ HEURISTICS.append({
          and df.name not like 'nullsub%'
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 NAME = "Same cleaned pseudo-code"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.clean_pseudo = df.clean_pseudo
@@ -209,15 +205,15 @@ HEURISTICS.append({
          and df.name not like 'nullsub%'
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Same address, nodes, edges and mnemonics"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.rva = df.rva
@@ -230,15 +226,15 @@ HEURISTICS.append({
         and f.nodes > 1
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Same RVA"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
               from functions f,
                    diff.functions df
              where df.rva = f.rva
@@ -248,8 +244,8 @@ HEURISTICS.append({
                and df.nodes >= 3
                %POSTFIX%
              order by f.source_file = df.source_file""",
-  "min":0.7,
-  "flags":[HEUR_FLAG_SAME_CPU]
+    "min": 0.7,
+    "flags": [HEUR_FLAG_SAME_CPU],
 })
 
 #
@@ -284,10 +280,10 @@ HEURISTICS.append({
 
 NAME = "Microcode mnemonics small primes product"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Best",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Best",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.microcode_spp = df.microcode_spp
@@ -299,7 +295,7 @@ HEURISTICS.append({
          and df.name not like 'nullsub%'
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 # It seems that SQLite is slowly executing this query due to the following:
@@ -310,10 +306,10 @@ HEURISTICS.append({
 # to take a look to see if bloom filters can be disabled...
 NAME = "Same named compilation unit function match"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX_TRUSTED,
-  "sql":"""  select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX_TRUSTED,
+    "sql": f"""  select {get_query_fields(NAME)}""" + """
                from main.compilation_units main_cu,
                     main.compilation_unit_functions mcuf,
                     main.functions f,
@@ -332,16 +328,16 @@ HEURISTICS.append({
                 and f.nodes >= 5
                 %POSTFIX% 
                 """,
-  "min":0.44,
-  "flags":[]
+    "min": 0.44,
+    "flags": [],
 })
 
 NAME = "Same anonymous compilation unit function match"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""  select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""  select {get_query_fields(NAME)}""" + """
                from main.compilation_units main_cu,
                     main.compilation_unit_functions mcuf,
                     main.functions f,
@@ -360,8 +356,8 @@ HEURISTICS.append({
                 and f.nodes >= 5
                 %POSTFIX% 
               order by f.source_file = df.source_file""",
-  "min":0.449,
-  "flags":[]
+    "min": 0.449,
+    "flags": [],
 })
 
 # An ORDER BY clause would be good to have here, but SQLite may generate huge
@@ -375,10 +371,10 @@ HEURISTICS.append({
 # And it might be slowing down our query...
 NAME = "Same compilation unit"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
                 from main.compilation_units mcu,
                   main.compilation_unit_functions mcuf,
                   main.functions f,
@@ -394,7 +390,7 @@ HEURISTICS.append({
                 and df.nodes > 4
                 and (substr(f.name, 1, 4) = 'sub_' or substr(df.name, 1, 4) == 'sub_')
                 %POSTFIX% """,
-  "flags":[]
+    "flags": [],
 })
 
 # Adding a DISTINCT and an ORDER BY clause in this query causes SQLite to create
@@ -402,10 +398,10 @@ HEURISTICS.append({
 # up triggering an error after a long time running.
 NAME = "Same KOKA hash and constants"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from main.constants mc,
             diff.constants dc,
             main.functions  f,
@@ -416,7 +412,7 @@ HEURISTICS.append({
         and f.kgh_hash = df.kgh_hash
         and f.nodes >= 3
         %POSTFIX% """,
-  "flags":[]
+    "flags": [],
 })
 
 # The same explained in the previous query happens here: for huge databases the
@@ -444,10 +440,10 @@ HEURISTICS.append({
 
 NAME = "Same constants"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.constants = df.constants
@@ -455,8 +451,8 @@ HEURISTICS.append({
         and f.constants_count > 1
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min":0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 # The ORDER BY clause is removed because it was causing serious slowness problems
@@ -531,10 +527,10 @@ HEURISTICS.append({
 #
 NAME = "Same address and rare constant"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from main.constants mc,
             diff.constants dc,
             main.functions  f,
@@ -545,17 +541,17 @@ HEURISTICS.append({
         and df.address = f.address
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min":0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 # The DISTINCT and ORDER BY clause have been removed due to slowness problems
 NAME = "Same rare constant"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from main.constants mc,
             diff.constants dc,
             main.functions  f,
@@ -566,16 +562,16 @@ HEURISTICS.append({
         and f.nodes >= 3 and df.nodes >= 3
         and f.constants_count > 0
         %POSTFIX% """,
-  "min":0.2,
-  "flags":[HEUR_FLAG_SLOW]
+    "min": 0.2,
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 NAME = "Same MD Index and constants"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.md_index = df.md_index
@@ -585,15 +581,15 @@ HEURISTICS.append({
          and f.constants_count > 0))
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Import names hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
               from functions f,
                   diff.functions df
             where f.names = df.names
@@ -603,15 +599,15 @@ HEURISTICS.append({
               and f.nodes > 5 and df.nodes > 5
               %POSTFIX%
             order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Mnemonics and names"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.mnemonics = df.mnemonics
@@ -621,15 +617,15 @@ HEURISTICS.append({
          and f.instructions > 5 and df.instructions > 5
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Pseudo-code fuzzy hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where df.pseudocode_hash1 = f.pseudocode_hash1
@@ -642,15 +638,15 @@ HEURISTICS.append({
         and df.instructions > 5
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Similar pseudo-code and names"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.pseudocode_lines = df.pseudocode_lines
@@ -661,16 +657,16 @@ HEURISTICS.append({
         and f.pseudocode is not null
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min": 0.579,
-  "flags":[]
+    "min": 0.579,
+    "flags": [],
 })
 
 NAME = "Mnemonics small-primes-product"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.mnemonics_spp = df.mnemonics_spp
@@ -678,18 +674,18 @@ HEURISTICS.append({
          and f.nodes > 1 and df.nodes > 1
          and df.instructions > 5
          %POSTFIX% """,
-  "min":0.6,
-  "flags":[]
+    "min": 0.6,
+    "flags": [],
 })
 
 # The ORDER BY clause is removed because it was causing serious slowness problems
 # with big and huge databases.
 NAME = "Same nodes, edges, loops and strongly connected components"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.nodes = df.nodes
@@ -700,8 +696,8 @@ HEURISTICS.append({
         and f.loops > 0
         and (substr(f.name, 1, 4) = 'sub_' or substr(df.name, 1, 4) == 'sub_')
         %POSTFIX% """,
-  "min":0.549,
-  "flags":[]
+    "min": 0.549,
+    "flags": [],
 })
 
 # The ORDER BY clause is removed because it was causing serious slowness problems
@@ -727,10 +723,10 @@ HEURISTICS.append({
 
 NAME = "Same low complexity and names"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.names = df.names
@@ -739,16 +735,16 @@ HEURISTICS.append({
         and df.names != '[]'
         and (substr(f.name, 1, 4) = 'sub_' or substr(df.name, 1, 4) == 'sub_')
         %POSTFIX% """,
-  "min":0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 NAME = "Switch structures"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.switches = df.switches
@@ -756,62 +752,62 @@ HEURISTICS.append({
         and f.nodes > 5 and df.nodes > 5
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min": 0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 NAME = "Pseudo-code fuzzy (normal)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where df.pseudocode_hash1 = f.pseudocode_hash1
         and f.pseudocode_lines > 5 and df.pseudocode_lines > 5
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min": 0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 NAME = "Pseudo-code fuzzy (mixed)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where df.pseudocode_hash3 = f.pseudocode_hash3
         and f.pseudocode_lines > 5 and df.pseudocode_lines > 5
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Pseudo-code fuzzy (reverse)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where df.pseudocode_hash2 = f.pseudocode_hash2
         and f.pseudocode_lines > 5 and df.pseudocode_lines > 5
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 NAME = "Pseudo-code fuzzy AST hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select distinct {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where df.pseudocode_primes = f.pseudocode_primes
@@ -819,56 +815,56 @@ HEURISTICS.append({
         and length(f.pseudocode_primes) >= 35
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min": 0.35,
-  "flags":[HEUR_FLAG_UNRELIABLE]
+    "min": 0.35,
+    "flags": [HEUR_FLAG_UNRELIABLE],
 })
 
 NAME = "Partial pseudo-code fuzzy hash (normal)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""  select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""  select distinct {get_query_fields(NAME)}""" + """
          from functions f,
               diff.functions df
         where substr(df.pseudocode_hash1, 1, 16) = substr(f.pseudocode_hash1, 1, 16)
           and f.nodes > 5 and df.nodes > 5
           %POSTFIX%
         order by f.source_file = df.source_file""",
-  "min":0.5,
-  "flags":[HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE]
+    "min": 0.5,
+    "flags": [HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE],
 })
 
 NAME = "Partial pseudo-code fuzzy hash (reverse)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""  select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""  select distinct {get_query_fields(NAME)}""" + """
          from functions f,
               diff.functions df
         where substr(df.pseudocode_hash2, 1, 16) = substr(f.pseudocode_hash2, 1, 16)
           and f.nodes > 5 and df.nodes > 5
           %POSTFIX%
         order by f.source_file = df.source_file""",
-  "min":0.5,
-  "flags":[HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE]
+    "min": 0.5,
+    "flags": [HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE],
 })
 
 NAME = "Partial pseudo-code fuzzy hash (mixed)"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""  select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""  select distinct {get_query_fields(NAME)}""" + """
          from functions f,
               diff.functions df
         where substr(df.pseudocode_hash3, 1, 16) = substr(f.pseudocode_hash3, 1, 16)
           and f.nodes > 5 and df.nodes > 5
           %POSTFIX%
         order by f.source_file = df.source_file""",
-  "min":0.5,
-  "flags":[HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE]
+    "min": 0.5,
+    "flags": [HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE],
 })
 
 NAME = "Same rare assembly instruction"
@@ -966,10 +962,10 @@ select """ + get_query_fields(NAME) + """
 
 NAME = "Loop count"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Partial",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Partial",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.loops = df.loops
@@ -977,16 +973,16 @@ HEURISTICS.append({
         and f.nodes >= 3 and df.nodes >= 3
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "min":0.49,
-  "flags":[HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE]
+    "min": 0.49,
+    "flags": [HEUR_FLAG_SLOW, HEUR_FLAG_UNRELIABLE],
 })
 
 NAME = "Same graph"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO_MAX,
-  "sql":""" select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO_MAX,
+    "sql": f""" select {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.nodes = df.nodes 
@@ -1012,8 +1008,8 @@ HEURISTICS.append({
              case when f.pseudocode_primes = df.pseudocode_primes then 1 else 0 end +
              case when f.pseudocode_hash2 = df.pseudocode_hash2 then 1 else 0 end +
              case when f.pseudocode_hash3 = df.pseudocode_hash3 then 1 else 0 end DESC""",
-  "min":0.5,
-  "flags":[]
+    "min": 0.5,
+    "flags": [],
 })
 
 #
@@ -1044,10 +1040,10 @@ HEURISTICS.append({
 #
 NAME = "Nodes, edges, complexity and mnemonics"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.nodes = df.nodes
@@ -1057,7 +1053,7 @@ HEURISTICS.append({
          and f.nodes > 1 and f.edges > 0
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SLOW]
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 #
@@ -1066,10 +1062,10 @@ HEURISTICS.append({
 #
 NAME = "Nodes, edges, complexity and prototype"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.nodes = df.nodes
@@ -1079,7 +1075,7 @@ HEURISTICS.append({
          and f.prototype2 != 'int()'
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SLOW]
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 #
@@ -1087,10 +1083,10 @@ HEURISTICS.append({
 #
 NAME = "Nodes, edges, complexity, in-degree and out-degree"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.nodes = df.nodes
@@ -1101,7 +1097,7 @@ HEURISTICS.append({
          and f.outdegree = df.outdegree
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SLOW]
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 #
@@ -1109,10 +1105,10 @@ HEURISTICS.append({
 #
 NAME = "Nodes, edges and complexity"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":""" select distinct """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f""" select distinct {get_query_fields(NAME)}""" + """
         from functions f,
              diff.functions df
        where f.nodes = df.nodes
@@ -1121,7 +1117,7 @@ HEURISTICS.append({
          and f.nodes > 1 and f.edges > 0
          %POSTFIX%
        order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SLOW]
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 #
@@ -1129,17 +1125,17 @@ HEURISTICS.append({
 #
 NAME = "Same high complexity"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.cyclomatic_complexity = df.cyclomatic_complexity
         and f.cyclomatic_complexity >= 50
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[HEUR_FLAG_SLOW]
+    "flags": [HEUR_FLAG_SLOW],
 })
 
 #
@@ -1147,10 +1143,10 @@ HEURISTICS.append({
 #
 NAME = "Topological sort hash"
 HEURISTICS.append({
-  "name":NAME,
-  "category":"Unreliable",
-  "ratio":HEUR_TYPE_RATIO,
-  "sql":"""select """ + get_query_fields(NAME) + """
+    "name": NAME,
+    "category": "Unreliable",
+    "ratio": HEUR_TYPE_RATIO,
+    "sql": f"""select {get_query_fields(NAME)}""" + """
        from functions f,
             diff.functions df
       where f.strongly_connected = df.strongly_connected
@@ -1159,7 +1155,7 @@ HEURISTICS.append({
         and f.nodes > 10
         %POSTFIX%
       order by f.source_file = df.source_file""",
-  "flags":[]
+    "flags": [],
 })
 
 #-------------------------------------------------------------------------------

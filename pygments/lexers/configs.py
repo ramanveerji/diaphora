@@ -53,11 +53,9 @@ class IniLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        npos = text.find('\n')
-        if npos < 3:
-            return False
-        return text[0] == '[' and text[npos-1] == ']'
+    def analyse_text(self):
+        npos = self.find('\n')
+        return False if npos < 3 else self[0] == '[' and self[npos-1] == ']'
 
 
 class RegeditLexer(RegexLexer):
@@ -99,8 +97,8 @@ class RegeditLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
-        return text.startswith('Windows Registry Editor')
+    def analyse_text(self):
+        return self.startswith('Windows Registry Editor')
 
 
 class PropertiesLexer(RegexLexer):
@@ -140,14 +138,8 @@ def _rx_indent(level):
     tab_width = 8
     # Regex matching a given indentation {level}, assuming that indentation is
     # a multiple of {tab_width}. In other cases there might be problems.
-    if tab_width == 2:
-        space_repeat = '+'
-    else:
-        space_repeat = '{1,%d}' % (tab_width - 1)
-    if level == 1:
-        level_repeat = ''
-    else:
-        level_repeat = '{%s}' % level
+    space_repeat = '+' if tab_width == 2 else '{1,%d}' % (tab_width - 1)
+    level_repeat = '' if level == 1 else '{%s}' % level
     return r'(?:\t| %s\t| {%s})%s.*\n' % (space_repeat, tab_width, level_repeat)
 
 
@@ -167,18 +159,14 @@ class KconfigLexer(RegexLexer):
     # No re.MULTILINE, indentation-aware help text needs line-by-line handling
     flags = 0
 
-    def call_indent(level):
+    def call_indent(self):
         # If indentation >= {level} is detected, enter state 'indent{level}'
-        return (_rx_indent(level), String.Doc, 'indent%s' % level)
+        return _rx_indent(self), String.Doc, f'indent{self}'
 
-    def do_indent(level):
+    def do_indent(self):
         # Print paragraphs of indentation level >= {level} as String.Doc,
         # ignoring blank lines. Then return to 'root' state.
-        return [
-            (_rx_indent(level), String.Doc),
-            (r'\s*\n', Text),
-            default('#pop:2')
-        ]
+        return [(_rx_indent(self), String.Doc), (r'\s*\n', Text), default('#pop:2')]
 
     tokens = {
         'root': [
@@ -333,6 +321,8 @@ class ApacheConfLexer(RegexLexer):
     }
 
 
+
+
 class SquidConfLexer(RegexLexer):
     """
     Lexer for squid configuration files.
@@ -447,12 +437,11 @@ class SquidConfLexer(RegexLexer):
             (r'#', Comment, 'comment'),
             (words(keywords, prefix=r'\b', suffix=r'\b'), Keyword),
             (words(opts, prefix=r'\b', suffix=r'\b'), Name.Constant),
-            # Actions
             (words(actions, prefix=r'\b', suffix=r'\b'), String),
             (words(actions_stats, prefix=r'stats/', suffix=r'\b'), String),
             (words(actions_log, prefix=r'log/', suffix=r'='), String),
             (words(acls, prefix=r'\b', suffix=r'\b'), Keyword),
-            (ip_re + r'(?:/(?:' + ip_re + r'|\b\d+\b))?', Number.Float),
+            (f'{ip_re}(?:/(?:{ip_re}' + r'|\b\d+\b))?', Number.Float),
             (r'(?:\b\d+\b(?:-\b\d+|%)?)', Number),
             (r'\S+', Text),
         ],
@@ -462,6 +451,7 @@ class SquidConfLexer(RegexLexer):
             default('#pop'),
         ],
     }
+
 
 
 class NginxConfLexer(RegexLexer):
@@ -656,10 +646,7 @@ class TerraformLexer(ExtendedRegexLexer):
         line_re = re.compile('.*?\n')
 
         for match in line_re.finditer(ctx.text, ctx.pos):
-            if tolerant:
-                check = match.group().strip()
-            else:
-                check = match.group().rstrip()
+            check = match.group().strip() if tolerant else match.group().rstrip()
             if check == hdname:
                 for amatch in lines:
                     yield amatch.start(), String.Heredoc, amatch.group()
@@ -1115,14 +1102,16 @@ class SingularityLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """This is a quite simple script file, but there are a few keywords
         which seem unique to this language."""
         result = 0
-        if re.search(r'\b(?:osversion|includecmd|mirrorurl)\b', text, re.IGNORECASE):
+        if re.search(
+            r'\b(?:osversion|includecmd|mirrorurl)\b', self, re.IGNORECASE
+        ):
             result += 0.5
 
-        if re.search(SingularityLexer._section[1:], text):
+        if re.search(SingularityLexer._section[1:], self):
             result += 0.49
 
         return result

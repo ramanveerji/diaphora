@@ -93,7 +93,7 @@ class CExampleDiaphoraHooks:
     name2 = func2["name"]
     if name1 != name2 and not name1.startswith("sub_") and not name2.startswith("sub_"):
       if name1.find(name2) == -1 and name2.find(name1) == -1:
-        print("on_match(): False positive found %s -> %s, discarded..." % (name1, name2))
+        print(f"on_match(): False positive found {name1} -> {name2}, discarded...")
         return False, 0
 
     return True, ratio

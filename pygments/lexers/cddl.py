@@ -12,6 +12,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 import re
 
 __all__ = ['CddlLexer']
@@ -29,6 +30,8 @@ from pygments.token import (
     Text,
     Whitespace,
 )
+
+
 
 
 class CddlLexer(RegexLexer):
@@ -113,58 +116,55 @@ class CddlLexer(RegexLexer):
     # lookahead here that says "after a 0 there must be no digit". This makes the
     # '0' the invalid character in '01', which looks nicer when highlighted.
     _re_uint = r"(?:0b[01]+|0x[0-9a-fA-F]+|[1-9]\d*|0(?!\d))"
-    _re_int = r"-?" + _re_uint
+    _re_int = f"-?{_re_uint}"
 
     tokens = {
-        "commentsandwhitespace": [(r"\s+", Whitespace), (r";.+$", Comment.Single)],
+        "commentsandwhitespace": [
+            (r"\s+", Whitespace),
+            (r";.+$", Comment.Single),
+        ],
         "root": [
             include("commentsandwhitespace"),
-            # tag types
-            (r"#(\d\.{uint})?".format(uint=_re_uint), Keyword.Type),  # type or any
-            # occurrence
+            (r"#(\d\.{uint})?".format(uint=_re_uint), Keyword.Type),
             (
                 r"({uint})?(\*)({uint})?".format(uint=_re_uint),
                 bygroups(Number, Operator, Number),
             ),
-            (r"\?|\+", Operator),  # occurrence
-            (r"\^", Operator),  # cuts
-            (r"(\.\.\.|\.\.)", Operator),  # rangeop
-            (words(_controls, suffix=r"\b"), Operator.Word),  # ctlops
-            # into choice op
+            (r"\?|\+", Operator),
+            (r"\^", Operator),
+            (r"(\.\.\.|\.\.)", Operator),
+            (words(_controls, suffix=r"\b"), Operator.Word),
             (r"&(?=\s*({groupname}|\())".format(groupname=_re_id), Operator),
-            (r"~(?=\s*{})".format(_re_id), Operator),  # unwrap op
-            (r"//|/(?!/)", Operator),  # double und single slash
+            (f"~(?=\s*{_re_id})", Operator),
+            (r"//|/(?!/)", Operator),
             (r"=>|/==|/=|=", Operator),
             (r"[\[\]{}\(\),<>:]", Punctuation),
-            # Bytestrings
             (r"(b64)(')", bygroups(String.Affix, String.Single), "bstrb64url"),
             (r"(h)(')", bygroups(String.Affix, String.Single), "bstrh"),
             (r"'", String.Single, "bstr"),
-            # Barewords as member keys (must be matched before values, types, typenames,
-            # groupnames).
-            # Token type is String as barewords are always interpreted as such.
             (
                 r"({bareword})(\s*)(:)".format(bareword=_re_id),
                 bygroups(String, Whitespace, Punctuation),
             ),
-            # predefined types
             (
-                words(_prelude_types, prefix=r"(?![\-_$@])\b", suffix=r"\b(?![\-_$@])"),
+                words(
+                    _prelude_types,
+                    prefix=r"(?![\-_$@])\b",
+                    suffix=r"\b(?![\-_$@])",
+                ),
                 Name.Builtin,
             ),
-            # user-defined groupnames, typenames
             (_re_id, Name.Class),
-            # values
             (r"0b[01]+", Number.Bin),
             (r"0o[0-7]+", Number.Oct),
-            (r"0x[0-9a-fA-F]+(\.[0-9a-fA-F]+)?p[+-]?\d+", Number.Hex),  # hexfloat
-            (r"0x[0-9a-fA-F]+", Number.Hex),  # hex
-            # Float
+            (r"0x[0-9a-fA-F]+(\.[0-9a-fA-F]+)?p[+-]?\d+", Number.Hex),
+            (r"0x[0-9a-fA-F]+", Number.Hex),
             (
-                r"{int}(?=(\.\d|e[+-]?\d))(?:\.\d+)?(?:e[+-]?\d+)?".format(int=_re_int),
+                r"{int}(?=(\.\d|e[+-]?\d))(?:\.\d+)?(?:e[+-]?\d+)?".format(
+                    int=_re_int
+                ),
                 Number.Float,
             ),
-            # Int
             (_re_int, Number.Integer),
             (r'"(\\\\|\\"|[^"])*"', String.Double),
         ],

@@ -45,7 +45,7 @@ class bin_module():
   def __repr__(self):
     line = "Module at 0x%08x:0x%08x" % (self.start, self.end)
     if self.name != "" and self.name is not None:
-      line += " (name %s)" % self.name
+      line += f" (name {self.name})"
     return line
 
   def __str__(self):

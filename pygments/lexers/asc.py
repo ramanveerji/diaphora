@@ -46,6 +46,6 @@ class AscLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        if re.search(r'^-----BEGIN [^\n]+-----\r?\n', text):
+    def analyse_text(self):
+        if re.search(r'^-----BEGIN [^\n]+-----\r?\n', self):
             return True

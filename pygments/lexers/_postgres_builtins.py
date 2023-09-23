@@ -597,10 +597,7 @@ if __name__ == '__main__':  # pragma: no cover
         update_consts(__file__, 'KEYWORDS', keywords)
 
     def parse_keywords(f):
-        kw = []
-        for m in re.finditer(r'PG_KEYWORD\("(.+?)"', f):
-            kw.append(m.group(1).upper())
-
+        kw = [m.group(1).upper() for m in re.finditer(r'PG_KEYWORD\("(.+?)"', f)]
         if not kw:
             raise ValueError('no keyword found')
 
@@ -627,13 +624,10 @@ if __name__ == '__main__':  # pragma: no cover
             for tmp in [t for tmp in line.split('[')
                         for t in tmp.split(']') if "(" not in t]:
                 for t in tmp.split(','):
-                    t = t.strip()
-                    if not t: continue
-                    dt.add(" ".join(t.split()))
+                    if t := t.strip():
+                        dt.add(" ".join(t.split()))
 
-        dt = list(dt)
-        dt.sort()
-        return dt
+        return sorted(dt)
 
     def parse_pseudos(f):
         dt = []
@@ -672,8 +666,7 @@ if __name__ == '__main__':  # pragma: no cover
         re_match = re.compile(r'^%s\s*=\s*\($.*?^\s*\)$' % constname, re.M | re.S)
         m = re_match.search(data)
         if not m:
-            raise ValueError('Could not find existing definition for %s' %
-                             (constname,))
+            raise ValueError(f'Could not find existing definition for {constname}')
 
         new_block = format_lines(constname, content)
         data = data[:m.start()] + new_block + data[m.end():]

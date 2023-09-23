@@ -8,11 +8,14 @@
     :license: BSD, see LICENSE for details.
 """
 
+
 from pygments.lexer import ExtendedRegexLexer, words, default, include, bygroups
 from pygments.token import Comment, Error, Keyword, Literal, Name, Number, \
     Operator, Punctuation, String, Whitespace
 
 __all__ = ['CleanLexer']
+
+
 
 
 class CleanLexer(ExtendedRegexLexer):
@@ -38,8 +41,8 @@ class CleanLexer(ExtendedRegexLexer):
     lowerId = r'[a-z`][\w`]*'
     upperId = r'[A-Z`][\w`]*'
     funnyId = r'[~@#$%\^?!+\-*<>\\/|&=:]+'
-    scoreUpperId = r'_' + upperId
-    scoreLowerId = r'_' + lowerId
+    scoreUpperId = f'_{upperId}'
+    scoreLowerId = f'_{lowerId}'
     moduleId = r'[a-zA-Z_][a-zA-Z0-9_.`]+'
     classId = '|'.join([lowerId, upperId, funnyId])
 
