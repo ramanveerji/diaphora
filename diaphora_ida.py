@@ -298,10 +298,7 @@ class command_handler_t(ida_kernwin.action_handler_t):
   def activate(self, ctx):
     if self.num_args == 1:
       return self.obj.OnCommand(self.cmd_id)
-    if len(self.obj.selected_items) == 0:
-      sel = 0
-    else:
-      sel = self.obj.selected_items[0]
+    sel = 0 if len(self.obj.selected_items) == 0 else self.obj.selected_items[0]
     return self.obj.OnCommand(sel, self.cmd_id)
 
   def update(self, ctx):
@@ -474,8 +471,10 @@ class CIDAChooser(CDiaphoraChooser):
     elif cmd_id == self.cmd_show_pseudo:
       self.bindiff.show_pseudo(self.items[n], self.primary)
     elif cmd_id == self.cmd_import_all:
-      text = "HIDECANCEL\n"
-      text += "Do you want to import all functions, comments, prototypes and definitions?"
+      text = (
+          "HIDECANCEL\n" +
+          "Do you want to import all functions, comments, prototypes and definitions?"
+      )
       if ask_yn(1, text) == 1:
         self.bindiff.import_all(self.items)
     elif cmd_id == self.cmd_import_all_funcs:
@@ -487,25 +486,21 @@ class CIDAChooser(CDiaphoraChooser):
         == 1
       ):
         self.bindiff.import_all_auto(self.items)
-    elif (
-      cmd_id == self.cmd_import_selected
-      or cmd_id == self.cmd_import_selected_auto
-    ):
+    elif cmd_id in [self.cmd_import_selected, self.cmd_import_selected_auto]:
       if len(self.selected_items) <= 1:
         self.bindiff.import_one(self.items[n])
-      else:
-        if (
+      elif (
           ask_yn(
             1,
             "HIDECANCEL\nDo you really want to import all selected IDA named matched functions, comments, prototypes and definitions?",
           )
           == 1
         ):
-          self.bindiff.import_selected(
-            self.items,
-            self.selected_items,
-            cmd_id == self.cmd_import_selected_auto,
-          )
+        self.bindiff.import_selected(
+          self.items,
+          self.selected_items,
+          cmd_id == self.cmd_import_selected_auto,
+        )
     elif cmd_id == self.cmd_diff_c:
       self.bindiff.show_pseudo_diff(self.items[n])
     elif cmd_id == self.cmd_diff_c_patch:
@@ -665,25 +660,23 @@ class CIDAChooser(CDiaphoraChooser):
 
     if not name1.startswith("sub_") and not name2.startswith("sub_"):
       if name1 != name2:
-        if name2.find(name1) == -1 and not name1.find(name2) == -1:
+        if name2.find(name1) == -1 and name1.find(name2) != -1:
           return True
 
     return False
 
   def OnGetLineAttr(self, n):
-    if not self.title.startswith("Unmatched"):
-      item = self.items[n]
-      ratio = float(item[CHOOSER_ITEM_RATIO])
-      if self.seems_false_positive(item):
-        return [LITTLE_ORANGE, 0]
-      else:
-        red = int(164 * (1 - ratio))
-        green = int(128 * ratio)
-        blue = int(255 * (1 - ratio))
+    if self.title.startswith("Unmatched"):
+      return [0xFFFFFF, 0]
+    item = self.items[n]
+    ratio = float(item[CHOOSER_ITEM_RATIO])
+    if self.seems_false_positive(item):
+      return [LITTLE_ORANGE, 0]
+    red = int(164 * (1 - ratio))
+    green = int(128 * ratio)
         # pylint: disable-next=consider-using-f-string
-        color = int("0x%02x%02x%02x" % (blue, green, red), 16)
-      return [color, 0]
-    return [0xFFFFFF, 0]
+    color = int("0x%02x%02x%02x" % (int(255 * (1 - ratio)), green, red), 16)
+    return [color, 0]
 
 
 #-------------------------------------------------------------------------------
@@ -858,7 +851,7 @@ class CDiffGraphViewer(GraphViewer):
       self.nodes = {}
       self.colours = colours
     except:
-      warning("CDiffGraphViewer: OnInit!!! " + str(sys.exc_info()[1]))
+      warning(f"CDiffGraphViewer: OnInit!!! {str(sys.exc_info()[1])}")
 
   def OnRefresh(self):
     try:
@@ -886,13 +879,8 @@ class CDiffGraphViewer(GraphViewer):
   def OnGetText(self, node_id):
     try:
       ea, rows = self[node_id]
-      if ea in self.colours:
-        colour = self.colours[ea]
-      else:
-        colour = 0xFFFFFF
-      ret = []
-      for row in rows:
-        ret.append(row[2])
+      colour = self.colours[ea] if ea in self.colours else 0xFFFFFF
+      ret = [row[2] for row in rows]
       label = "\n".join(ret)
       return (label, colour)
     except:
@@ -1088,11 +1076,11 @@ class CIDABinDiff(diaphora.CBinDiff):
     try:
       cur.execute(sql)
 
-      row = cur.fetchone()
-      if not row:
+      if row := cur.fetchone():
+        address = int(row[0])
+      else:
         return None
 
-      address = int(row[0])
     finally:
       cur.close()
 
@@ -1155,7 +1143,7 @@ class CIDABinDiff(diaphora.CBinDiff):
         raise Exception("Canceled.")
 
       i += 1
-      if (total_funcs >= 100) and i % (int(total_funcs / 100)) == 0 or i == 1:
+      if total_funcs >= 100 and i % (total_funcs // 100) == 0 or i == 1:
         line = "Exported %d function(s) out of %d total.\nElapsed %d:%02d:%02d second(s), remaining time ~%d:%02d:%02d"
         elapsed = time.monotonic() - t
         remaining = (elapsed / i) * (total_funcs - i)
@@ -1311,8 +1299,6 @@ class CIDABinDiff(diaphora.CBinDiff):
           line = f"{type_name} {row['name']};"
           try:
             ret = idc.parse_decls(line)
-            if ret != 0:
-              pass
           except:
             log(f"Error importing type: {str(sys.exc_info()[1])}")
 
@@ -1330,8 +1316,6 @@ class CIDABinDiff(diaphora.CBinDiff):
             ret = idc.parse_decls(
               definition
             )  # Remove the "idc." to reproduce some strange behaviour
-            if ret != 0:
-              pass
     finally:
       cur.close()
 
@@ -1420,22 +1404,19 @@ class CIDABinDiff(diaphora.CBinDiff):
     )
 
   def show_asm_diff(self, item):
-    res = self.generate_asm_diff(item[1], item[3], error_func=warning)
-    if res:
+    if res := self.generate_asm_diff(item[1], item[3], error_func=warning):
       (src, title) = res
       cdiffer = CHtmlViewer()
       cdiffer.Show(src, title)
 
   def show_microcode_diff(self, item):
-    res = self.generate_microcode_diff(item[1], item[3], error_func=warning)
-    if res:
+    if res := self.generate_microcode_diff(item[1], item[3], error_func=warning):
       (src, title) = res
       cdiffer = CHtmlViewer()
       cdiffer.Show(src, title)
 
   def save_asm_diff(self, ea1, ea2, filename):
-    res = self.generate_asm_diff(ea1, ea2)
-    if res:
+    if res := self.generate_asm_diff(ea1, ea2):
       (src, _) = res
       with open(filename, "w", encoding="utf8") as f:
         f.write(src)
@@ -1459,7 +1440,7 @@ class CIDABinDiff(diaphora.CBinDiff):
     ea2 = str(int(item[3], 16))
     self.do_import_one(ea1, ea2, True)
 
-    new_func = self.read_function(str(ea1))
+    new_func = self.read_function(ea1)
     self.delete_function(ea1)
     self.save_function(new_func)
     self.db.commit()
@@ -1469,13 +1450,10 @@ class CIDABinDiff(diaphora.CBinDiff):
   def show_asm(self, item, primary):
     cur = self.db_cursor()
     try:
-      if primary:
-        db = "main"
-      else:
-        db = "diff"
+      db = "main" if primary else "diff"
       ea = str(int(item[1], 16))
       sql = "select prototype, assembly, name from %s.functions where address = ?"
-      sql = sql % db
+      sql %= db
       cur.execute(sql, (ea,))
       row = cur.fetchone()
       if row is None:
@@ -1498,16 +1476,13 @@ class CIDABinDiff(diaphora.CBinDiff):
   def show_pseudo(self, item, primary):
     cur = self.db_cursor()
     try:
-      if primary:
-        db = "main"
-      else:
-        db = "diff"
+      db = "main" if primary else "diff"
       ea = str(int(item[1], 16))
       sql = (
         "select prototype, pseudocode, name from %s.functions where address = ?"
       )
-      sql = sql % db
-      cur.execute(sql, (str(ea),))
+      sql %= db
+      cur.execute(sql, (ea, ))
       row = cur.fetchone()
       if row is None or row["prototype"] is None or row["pseudocode"] is None:
         warning(
@@ -1553,8 +1528,7 @@ class CIDABinDiff(diaphora.CBinDiff):
         row2 = rows[1]
 
         html_diff = CHtmlDiff()
-        proto1 = self.decompile_and_get(int(ea1))
-        if proto1:
+        if proto1 := self.decompile_and_get(int(ea1)):
           buf1 = proto1 + "\n" + "\n".join(self.pseudo[int(ea1)])
         else:
           log(
@@ -1572,9 +1546,7 @@ class CIDABinDiff(diaphora.CBinDiff):
         fmt.nobackground = True
         if not html:
           uni_diff = difflib.unified_diff(buf1.split("\n"), buf2.split("\n"))
-          tmp = []
-          for line in uni_diff:
-            tmp.append(line.strip("\n"))
+          tmp = [line.strip("\n") for line in uni_diff]
           tmp = tmp[2:]
           buf = "\n".join(tmp)
 
@@ -1591,15 +1563,16 @@ class CIDABinDiff(diaphora.CBinDiff):
     return res
 
   def show_pseudo_diff(self, item, html=True):
-    res = self.generate_pseudo_diff(item[1], item[3], html=html, error_func=warning)
-    if res:
+    if res := self.generate_pseudo_diff(item[1],
+                                        item[3],
+                                        html=html,
+                                        error_func=warning):
       (src, title) = res
       cdiffer = CHtmlViewer()
       cdiffer.Show(src, title)
 
   def save_pseudo_diff(self, ea1, ea2, filename):
-    res = self.generate_pseudo_diff(ea1, ea2, html=True)
-    if res:
+    if res := self.generate_pseudo_diff(ea1, ea2, html=True):
       (src, _) = res
       with open(filename, "w", encoding="utf8") as f:
         f.write(src)
@@ -1794,8 +1767,7 @@ class CIDABinDiff(diaphora.CBinDiff):
     """
     Build the CCallGraphViewer objects.
     """
-    g = CCallGraphViewer(title, callers, callees, name)
-    return g
+    return CCallGraphViewer(title, callers, callees, name)
 
   def show_callgraph_context(self, name1, name2):
     """
@@ -1860,8 +1832,7 @@ class CIDABinDiff(diaphora.CBinDiff):
 
     tmp_ea = None
     the_type = False
-    data_refs = list(DataRefsFrom(ea1))
-    if len(data_refs) > 0:
+    if data_refs := list(DataRefsFrom(ea1)):
       # Global variables
       tmp_ea = data_refs[0]
       if tmp_ea in self.names:
@@ -1880,10 +1851,10 @@ class CIDABinDiff(diaphora.CBinDiff):
     else:
       # Functions
       code_refs = list(CodeRefsFrom(ea1, 0))
-      if len(code_refs) == 0:
+      if not code_refs:
         code_refs = list(CodeRefsFrom(ea1, 1))
 
-      if len(code_refs) > 0:
+      if code_refs:
         curr_name = get_ea_name(code_refs[0])
         if curr_name != name and self.is_auto_generated(curr_name):
           set_name(code_refs[0], name, SN_CHECK)
@@ -1922,14 +1893,7 @@ class CIDABinDiff(diaphora.CBinDiff):
           return True
 
     # Has a name
-    if import_syms[ea][4] is not None:
-      return True
-
-    # Has pseudocode comment
-    if import_syms[ea][6] is not None:
-      return True
-
-    return False
+    return import_syms[ea][6] is not None if import_syms[ea][4] is None else True
 
   def do_import_instruction_level_item(self, diff_rows, import_syms, matched_syms):
     """
@@ -2119,14 +2083,11 @@ class CIDABinDiff(diaphora.CBinDiff):
 
     try:
       show_wait_box("Updating primary database...")
-      total = 0
       for ea in to_import:
         ea = str(ea)
         new_func = self.read_function(ea)
         self.delete_function(ea)
         self.save_function(new_func)
-        total += 1
-
       self.db.execute("analyze")
       self.db.commit()
 
@@ -2200,7 +2161,7 @@ class CIDABinDiff(diaphora.CBinDiff):
 
     mnem = None
     tokens = plain_line.split(" ")
-    for _, x in enumerate(tokens[1:]):
+    for x in tokens[1:]:
       if not x.isdigit():
         mnem = x
         pos = plain_line.find(x)
@@ -2354,14 +2315,12 @@ class CIDABinDiff(diaphora.CBinDiff):
     t = guess_type(ea)
     if not self.use_decompiler:
       return t
-    else:
-      try:
-        ret = self.decompile_and_get(ea)
-        if ret:
-          t = ret
-      except:
-        # pylint: disable-next=consider-using-f-string
-        log("Cannot decompile 0x%x: %s" % (ea, str(sys.exc_info()[1])))
+    try:
+      if ret := self.decompile_and_get(ea):
+        t = ret
+    except:
+      # pylint: disable-next=consider-using-f-string
+      log("Cannot decompile 0x%x: %s" % (ea, str(sys.exc_info()[1])))
     return t
 
   def register_menu_action(self, action_name, action_desc, handler, hotkey=None):
@@ -2425,20 +2384,12 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
     ):
       return False
 
-    # no single bits sets - mostly defines / flags
-    for i in range(64):
-      if value == (1 << i):
-        return False
-
-    return True
+    return all(value != 1 << i for i in range(64))
 
   def is_constant(self, oper, ea):
     value = oper.value
     # make sure, its not a reference but really constant
-    if value in DataRefsFrom(ea):
-      return False
-
-    return True
+    return value not in DataRefsFrom(ea)
 
   def get_disasm(self, ea):
     mnem = print_insn_mnem(ea)
@@ -2464,7 +2415,7 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
   def extract_function_callers(self, f):
     # Calculate the callers *but* considering data references to functions from
     # functions as code references.
-    callers = list()
+    callers = []
     refs = list(CodeRefsTo(f, 0))
     refs.extend(DataRefsTo(f))
     for caller in refs:
@@ -2493,8 +2444,7 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
     return constants
 
   def extract_function_switches(self, x, switches):
-    switch = get_switch_info(x)
-    if switch:
+    if switch := get_switch_info(x):
       switch_cases = switch.get_jtable_size()
       results = calc_switch_cases(x, switch)
 
@@ -2526,17 +2476,13 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
       for i, scc in enumerate(bb_topological_sorted):
         for bb in scc:
           bb_topo_order[bb] = i
-      tuples = []
-      for src, dst in bb_edges:
-        tuples.append(
-          (
-            bb_topo_order[bb_topo_num[src]],
-            bb_degree[src][0],
-            bb_degree[src][1],
-            bb_degree[dst][0],
-            bb_degree[dst][1],
-          )
-        )
+      tuples = [(
+          bb_topo_order[bb_topo_num[src]],
+          bb_degree[src][0],
+          bb_degree[src][1],
+          bb_degree[dst][0],
+          bb_degree[dst][1],
+      ) for src, dst in bb_edges]
       rt2, rt3, rt5, rt7 = (decimal.Decimal(p).sqrt() for p in (2, 3, 5, 7))
       emb_tuples = (
         sum((z0, z1 * rt2, z2 * rt3, z3 * rt5, z4 * rt7))
@@ -2577,9 +2523,7 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
 
   def extract_function_assembly_features(self, assembly, f, image_base):
     asm = []
-    keys = list(assembly.keys())
-    keys.sort()
-
+    keys = sorted(assembly.keys())
     # Collect the ordered list of addresses, as shown in the assembly
     # viewer (when diffing). It will be extremely useful for importing
     # stuff later on.
@@ -2636,9 +2580,8 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
     for sc in strongly_connected:
       if len(sc) > 1:
         loops += 1
-      else:
-        if sc[0] in bb_relations and sc[0] in bb_relations[sc[0]]:
-          loops += 1
+      elif sc[0] in bb_relations and sc[0] in bb_relations[sc[0]]:
+        loops += 1
 
     return (
       bb_topological,
@@ -2663,10 +2606,10 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
     micro = None
     micro_spp = 1
     clean_micro = None
-    mnemonics = set()
     if self.export_microcode and f in self.microcode:
       micro = "\n".join(self.microcode[f])
       ret = []
+      mnemonics = set()
       for line in self.microcode[f]:
         tokens = line.split(" ")
         for x in tokens[1:]:
@@ -2690,17 +2633,17 @@ or selecting Edit -> Plugins -> Diaphora - Show results"""
     return micro, clean_micro, micro_spp
 
   def get_microcode_instructions(self):
-    if HAS_HEXRAYS:
-      instructions = []
-      for x in dir(hr):
-        if x.startswith("m_"):
-          mnem = x[2:]
-          if mnem not in instructions:
-            instructions.append(x[2:])
+    if not HAS_HEXRAYS:
+      return []
+    instructions = []
+    for x in dir(hr):
+      if x.startswith("m_"):
+        mnem = x[2:]
+        if mnem not in instructions:
+          instructions.append(x[2:])
 
-      instructions.sort()
-      return instructions
-    return []
+    instructions.sort()
+    return instructions
 
   def read_function(self, ea):
     """

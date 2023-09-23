@@ -114,21 +114,21 @@ def ForEveryFuncInSeg( seg, fun ):
         f=NextFunction(f)		
 		
 		
-def NFuncUp( fun, n ) :
-    i=0
-    f=fun
-    while ((i<n) and (f!=ida_idaapi.BADADDR)):
-        f=PrevFunction(f)
-        i=i+1
-    return f
+def NFuncUp( fun, n ):
+	i=0
+	f=fun
+	while ((i<n) and (f!=ida_idaapi.BADADDR)):
+		f=PrevFunction(f)
+		i += 1
+	return f
     
-def NFuncDown( fun, n ) :
-    i=0
-    f=fun
-    while ((i<n) and (f!=ida_idaapi.BADADDR)):
-        f=NextFunction(f)
-        i=i+1
-    return f
+def NFuncDown( fun, n ):
+	i=0
+	f=fun
+	while ((i<n) and (f!=ida_idaapi.BADADDR)):
+		f=NextFunction(f)
+		i += 1
+	return f
 
 def FuncMidPt( fun ):
     fstart = idc.get_func_attr(fun, idc.FUNCATTR_START)
@@ -147,12 +147,8 @@ def FuncXrefsFrom ( fun ) :
     #print f
     return f
 
-def XrefFromRange ( fun ) :
-    f = FuncXrefsFrom(fun)
-    if f:
-        return (min(f),max(f))
-    else:
-        return (0,0)
+def XrefFromRange( fun ):
+	return (min(f), max(f)) if (f := FuncXrefsFrom(fun)) else (0, 0)
     
 def ProgramAddrRange() :
     return ida_funcs.get_prev_func(ida_idaapi.BADADDR) - ida_funcs.get_next_func(0)
@@ -190,34 +186,22 @@ def snakeToCamelCase(s):
         nx+=1
     return nf
     
-def isSnakeCase(s) :
-    p = re.compile("[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+\Z")
-    if p.match(s):
-        return True
-    return False
+def isSnakeCase(s):
+	p = re.compile("[a-zA-Z0-9]+(_[a-zA-Z0-9]+)+\Z")
+	return bool(p.match(s))
     
 #Todo - right now this is going to miss something like FooBARFunction
-def isCamelCase(s) :
-    p = re.compile("([A-Z][a-z0-9]+)([A-Z][a-z0-9]+)+\Z")
-    if p.match(s):
-        return True
-    return False
+def isCamelCase(s):
+	p = re.compile("([A-Z][a-z0-9]+)([A-Z][a-z0-9]+)+\Z")
+	return bool(p.match(s))
     
 #Todo - weed out if it's all uppercase or all uppercase and _, etc.
 def isUCSnakeCase(s):
-    p = re.compile("[A-Z0-9]+(_[A-Z0-9]+)+\Z")
-    if p.match(s):
-        return True
-    return False
+	p = re.compile("[A-Z0-9]+(_[A-Z0-9]+)+\Z")
+	return bool(p.match(s))
 
 def isPlausibleFunction(s):
-    if isSnakeCase(s):
-        if isUCSnakeCase(s):
-            return False
-        return True
-    if isCamelCase(s):
-        return True
-    return False
+	return not isUCSnakeCase(s) if isSnakeCase(s) else bool(isCamelCase(s))
 
 def PrependStrToFuncName(f,s):
     n = idc.get_func_name(f)
@@ -230,12 +214,9 @@ def PrependStrToFuncName(f,s):
 
 #Return just the "function name" part of the canonical name	
 def GetCanonicalName(f):
-    n = idc.get_func_name(f)
-    parts = n.split("_")
-    if len(parts) == 3:
-        return parts[1]
-    else:
-        return None
+	n = idc.get_func_name(f)
+	parts = n.split("_")
+	return parts[1] if len(parts) == 3 else None
 
 #Put function in canonical format, given the function name and module name        
 def NameCanonical(f,mod_name,func_name):
@@ -277,12 +258,12 @@ def RenameFuncWithNewMod(f,mod):
 
 #Rename a module (all functions that start with <mod>_)	
 def RenameMod(orig, new):
-    i = idc.get_next_func(0)
-    while (i != BADADDR):
-        n = idc.get_func_name(i)
-        if n.startswith(orig+"_"):
-            RenameFuncWithNewMod(i,new)
-        i = NextFunction(i)
+	i = idc.get_next_func(0)
+	while (i != BADADDR):
+		n = idc.get_func_name(i)
+		if n.startswith(f"{orig}_"):
+			RenameFuncWithNewMod(i,new)
+		i = NextFunction(i)
 	
 #Just rename the module over a given range (can be used to split a module and give part a new name)
 def RenameModRange(start, end, new):
@@ -295,62 +276,62 @@ def RenameModRange(start, end, new):
 #Given a range of functions, some of which may have names and module names
 # and a module name, put names in canonical format        
 def CanonicalizeRange(start,end,mod):
-    x = start
-    while (x<=end):
-        n = idc.get_func_name(x)
-        #if it already starts with mod name, assume it's canonical
-        if (not n.startswith(mod+"_")):
-            if (n.startswith("sub_")):
-                RenameFuncWithAddr(x,mod)
-            #this should be contains "_"
-            elif ("_" in n):
-                n = snakeToCamelCase(n)
-                NameCanonical(x,mod,n)
-            else:
-                NameCanonical(x,mod,n)
-        x = NextFunction(x)	
+	x = start
+	while (x<=end):
+		n = idc.get_func_name(x)
+		        #if it already starts with mod name, assume it's canonical
+		if not n.startswith(f"{mod}_"):
+			if (n.startswith("sub_")):
+			    RenameFuncWithAddr(x,mod)
+			#this should be contains "_"
+			elif ("_" in n):
+			    n = snakeToCamelCase(n)
+			    NameCanonical(x,mod,n)
+			else:
+			    NameCanonical(x,mod,n)
+		x = NextFunction(x)	
 
 #Returns a string that is the concatenation of all of the string references from a function, separated by <sep>
 #Iterates through every item in function and looks for data references that are strings        
 def CompileTextFromFunction(f,sep):
-    s=""
-    faddr = list(idautils.FuncItems(f))
-    for c in range(len(faddr)):
-        for d in idautils.DataRefsFrom(faddr[c]):
-            t = ida_nalt.get_str_type(d)
-            if ((t==0) or (t==3)):
-                s += " "+ sep + " " + idc.GetStrLitContents(d)
-    return s
+	s=""
+	faddr = list(idautils.FuncItems(f))
+	for item in faddr:
+		for d in idautils.DataRefsFrom(item):
+			t = ida_nalt.get_str_type(d)
+			if t in [0, 3]:
+				s += f" {sep} {idc.GetStrLitContents(d)}"
+	return s
 
 #Returns a string which is the concatenation all of the string references 
 # for an address range in the program, separated by <sep>
 #Similar to above, but iterates over the whole set of functions in the given range    
 def CompileTextFromRange(start,end,sep):
-    x = start
-    s = ""
-    while (x<=end):
-        faddr = list(idautils.FuncItems(x))
-        #print "items list: %d" % len(faddr)
-        for c in range(len(faddr)):
-            for d in idautils.DataRefsFrom(faddr[c]):
-                #print "Found ref at %x: %x " % (faddr[c],d)
-                t = ida_nalt.get_str_type(d)
-                if ((t==0) or (t==3)):
-                     s += " " + sep + " " + GetStrLitContents(d).decode("utf-8")
-        x = NextFunction(x)
-    return s
+	x = start
+	s = ""
+	while (x<=end):
+		faddr = list(idautils.FuncItems(x))
+		        #print "items list: %d" % len(faddr)
+		for item in faddr:
+			for d in idautils.DataRefsFrom(item):
+				#print "Found ref at %x: %x " % (faddr[c],d)
+				t = ida_nalt.get_str_type(d)
+				if t in [0, 3]:
+					s += f" {sep} " + GetStrLitContents(d).decode("utf-8")
+		x = NextFunction(x)
+	return s
 
 #Returns a string which is a concatenation of all the function names in the given range
 # separated by <sep>	
 def CompileFuncNamesFromRangeAsText(start,end,sep):
-    x = start
-    s = ""
-    while (x<=end):
-        n = idc.get_func_name(x)
-        if (not n.startswith("sub_")):
-            s += " " + sep + " " + n
-        x = NextFunction(x)
-    return s
+	x = start
+	s = ""
+	while (x<=end):
+		n = idc.get_func_name(x)
+		if (not n.startswith("sub_")):
+			s += f" {sep} {n}"
+		x = NextFunction(x)
+	return s
 	
 #helper function which checks for both ASCII and Unicode strings at the given ea	
 def GetStrLitContents(ea):

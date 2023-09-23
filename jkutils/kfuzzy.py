@@ -71,15 +71,9 @@ class CKoretFuzzyHashing:
     def edit_distance(self, sign1, sign2):
         if sign1 == sign2:
             return 0
-        
+
         m = max(len(sign1), len(sign2))
-        distance = 0
-        
-        for c in range(0, m):
-            if sign1[c:c+1] != sign2[c:c+1]:
-                distance += 1
-        
-        return distance
+        return sum(1 for c in range(0, m) if sign1[c:c+1] != sign2[c:c+1])
 
     def simplified(self, bytes, aggresive = False):
         output_size = self.output_size
@@ -92,19 +86,15 @@ class CKoretFuzzyHashing:
         for c in range(0, output_size):
             tmp = bytes[c*size:(c*size+1)+bsize]
             ret = sum(map(ord, tmp)) % 255
-            if reduce_errors:
-                if ret != 255 and ret != 0:
-                    buf.append(chr(ret))
-            else:
+            if reduce_errors and ret not in [255, 0] or not reduce_errors:
                 buf.append(chr(ret))
-        
         buf = "".join(buf)
         return base64.b64encode(buf).strip("=")[:output_size]
 
     def _hash(self, bytes, aggresive = False):
         idx = 0
         ret = []
-        
+
         output_size = self.output_size
         ignore_range = self.ignore_range
         bsize = self.bsize
@@ -117,12 +107,8 @@ class CKoretFuzzyHashing:
             buf = bytes[chunk_size:chunk_size+bsize]
             char = modsum(buf)
 
-            if reduce_errors:
-                if char != 255 and char != 0:
-                    rappend(chr(char))
-            else:
+            if reduce_errors and char not in [255, 0] or not reduce_errors:
                 rappend(chr(char))
-
             idx += 1
 
             if chunk_size+bsize > total_size:
@@ -156,21 +142,21 @@ class CKoretFuzzyHashing:
     def _fast_hash(self, bytes, aggresive = False):
         i = -1
         ret = set()
-        
+
         output_size = self.output_size
         bsize = self.bsize
         radd = ret.add
-        
+
         while i < output_size:
             i += 1
             buf = bytes[i*bsize:(i+1)*bsize]
             char = sum(map(ord, buf)) % 255
-            if self.reduce_errors:
-                if char != 255 and char != 0:
-                    radd(chr(char))
-            else:
+            if (
+                self.reduce_errors
+                and char not in [255, 0]
+                or not self.reduce_errors
+            ):
                 radd(chr(char))
-        
         ret = "".join(ret)
         return base64.b64encode(ret).strip("=")[:output_size]
 
@@ -188,7 +174,7 @@ class CKoretFuzzyHashing:
         size = len(bytes)
         chunk_size = idx*self.bsize
         byte = None
-        
+
         while size > chunk_size + (bsize/output_size):
             chunk_size = idx*self.bsize
             if byte is None:
@@ -197,22 +183,19 @@ class CKoretFuzzyHashing:
                 val = ord(byte)
             else:
                 val = output_size
-            
+
             buf = bytes[chunk_size:chunk_size+val]
             byte = self.xor(map(ord, buf)) % 255
             byte = chr(byte)
-            
-            if byte != '\xff' and byte != '\x00':
+
+            if byte not in ['\xff', '\x00']:
                 ret.append(byte)
-            
+
             idx += 1
-        
+
         ret = "".join(ret)
-        buf = ""
         size = len(ret)/output_size
-        for n in range(0, output_size):
-            buf += ret[n*size:(n*size)+1]
-        
+        buf = "".join(ret[n*size:(n*size)+1] for n in range(0, output_size))
         return base64.b64encode(buf).strip("=")[:output_size]
 
     def mix_blocks(self, bytes):
@@ -246,13 +229,9 @@ class CKoretFuzzyHashing:
     def hash_bytes(self, bytes, aggresive = False):
         if self.remove_spaces:
             bytes = self.cleanSpaces(bytes)
-        
+
         mix = self.mix_blocks(bytes)
-        if self.algorithm is None:
-            func = self._hash
-        else:
-            func = self.algorithm
-        
+        func = self._hash if self.algorithm is None else self.algorithm
         hash1 = func(mix, aggresive)
         hash2 = func(bytes, aggresive)
         hash3 = func(bytes[::-1], aggresive)
@@ -296,8 +275,7 @@ class kdha:
         """ Returns and hexadecimal digest """
         self._kfd.bsize = self.block_size
         self._kfd.output_size = self.digest_size
-        hash = self._kfd.hash_bytes(self._bytes)
-        return hash
+        return self._kfd.hash_bytes(self._bytes)
 
     def digest(self):
         """ Same as hexdigest """
@@ -329,7 +307,7 @@ def usage():
 def main(path):
     hash = CKoretFuzzyHashing()
     #hash.algorithm = hash._fast_hash
-    
+
     if os.path.isdir(path):
         print("Signature;Simple Signature;Reverse Signature;Filename")
         for root, dirs, files in os.walk(path):
@@ -337,14 +315,14 @@ def main(path):
                 tmp = os.path.join(root, name)
                 try:
                     ret = hash.hash_file(tmp, True)
-                    print("%s;%s" % (ret, tmp))
+                    print(f"{ret};{tmp}")
                 except:
-                    print("***ERROR with file %s" % tmp)
+                    print(f"***ERROR with file {tmp}")
                     print(sys.exc_info()[1])
     else:
         hash = CKoretFuzzyHashing()
         ret = hash.hash_file(path, True)
-        print("%s;%s" % (path, ret))
+        print(f"{path};{ret}")
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:

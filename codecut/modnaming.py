@@ -21,7 +21,6 @@ IDA_VERSION = 7
 if (IDA_VERSION < 7):	
 	import idc
 	import struct
-	import idautils
 	import basicutils_6x as basicutils
 else:
 	import ida_idaapi
@@ -29,9 +28,9 @@ else:
 	import ida_funcs
 	import ida_nalt
 	import ida_segment
-	import idautils
 	import basicutils_7x as basicutils
 
+import idautils
 import math
 import nltk
 import nltk.collocations
@@ -49,10 +48,10 @@ import re
 def string_range_tokenize(start,end,sep):
 	# get all string references in this range concatenated into a single string
 	t = basicutils.CompileTextFromRange(start,end,sep)
-	
+
 	#Enable this if you already have a bunch of function names and want to include that in the mix
 	#t+= basicutils.CompileFuncNamesFromRangeAsText(start,end,sep)
-	
+
 	#print "string_range_tokenize: raw text:"
 	#print t
 	#remove printf/sprintf format strings
@@ -67,10 +66,10 @@ def string_range_tokenize(start,end,sep):
 	tc = re.sub("[/\\\\]"," ",tc)
 	#remove anything except alphanumeric, spaces, . (for .c, .cpp, etc) and _
 	tc = re.sub("[^A-Za-z0-9_\.\s]"," ",tc)
-	
+
 	#lowercase it - and store this as the original set of tokens to work with
 	tokens = [tk.lower() for tk in tc.split()]
-	
+
 	#remove English stop words
 	#this is the list from the MIT *bow project
 	eng_stopw = {"about","all","am","an","and","are","as","at","be","been","but","by","can","cannot","did","do","does","doing","done","for","from","had","has","have","having","if","in","is","it","its","of","on","that","the","these","they","this","those","to","too","want","wants","was","what","which","will","with","would"}
@@ -79,14 +78,8 @@ def string_range_tokenize(start,end,sep):
 	code_sw = {"error","err","errlog","log","return","returned","byte","bytes","status","len","length","size","ok","0x","warning","fail","failed","failure","invalid","illegal","param","parameter","done","complete","assert","assertion","cant","didnt","class","foundation","cdecl","stdcall","thiscall"}
 	stopw = eng_stopw.union(code_sw)
 	c = 0
-	
-	tokens_f = []
-	
-	for t in tokens:
-		if t not in stopw:
-			tokens_f.append(t)
-			
-	return tokens_f
+
+	return [t for t in tokens if t not in stopw]
 
 #bracket_strings(start,end,b_brack,e_brack):
 #Return the most common string in the range <star,end> that begins with b_brack and ends with e_brack
@@ -98,11 +91,11 @@ def bracket_strings(start,end,b_brack,e_brack):
 	sep = "tzvlw"
 	t = basicutils.CompileTextFromRange(start,end,sep)
 	tokens = [tk.lower() for tk in t.split(sep)]
-	
+
 	b=[]
 	for tk in tokens:
 		tk = tk.strip()
-		
+
 		if tk.startswith(b_brack) :
 			b_contents = tk[1:tk.find(e_brack)]
 			#Hack to get rid of [-],[+],[*] - could also try to remove non alpha
@@ -110,18 +103,18 @@ def bracket_strings(start,end,b_brack,e_brack):
 				#Hack for debug prints that started with [0x%x]
 				if (b_contents != "0x%x"):
 					b.append(tk[1:tk.find(e_brack)])
-			
+
 	print("bracket_strings tokens:")
 	print(tokens)
 	print(b)
-	
+
 	u_gram=""
 	u_gram_score=0
-	if (len(b) > 0):
+	if b:
 		f = nltk.FreqDist(b)
 		u_gram = f.most_common(1)[0][0]
 		u_gram_score = f.most_common(1)[0][1]
-		
+
 	return (u_gram,u_gram_score)
 
 #source_file_strings(start,end):
@@ -131,17 +124,15 @@ def source_file_strings(start,end):
 	sep = "tzvlw"
 	t = basicutils.CompileTextFromRange(start,end,sep)
 	#normally would do lower here to normalize but we lose camel case that way
-	tokens = [tk for tk in t.split(sep)]
-	
+	tokens = list(t.split(sep))
+
 	#for each string, remove quotes and commas, then tokenize based on spaces to generate the final list
 	tokens2=[]
 	for tk in tokens:
 		tk = tk.strip()
 		#strip punctuation, need to leave in _ for filenames and / and \ for paths 
 		tk = re.sub("[\"\'\,]"," ",tk)
-		for tk2 in tk.split(" "):
-			tokens2.append(tk2)
-	
+		tokens2.extend(iter(tk.split(" ")))
 	b=[]
 	for tk in tokens2:
 		tk = tk.strip()
@@ -156,20 +147,20 @@ def source_file_strings(start,end):
 			else:
 				ntk = tk
 			b.append(ntk)
-			
+
 	print("source_file_strings tokens:")
 	#print tokens
 	print(b)
-	
+
 	#a better way to do this (if there are multiple)
 	#would be to sort, uniquify, and then make the name foo.c_and_bar.c
 	u_gram=""
 	u_gram_score=0
-	if (len(b) > 0):
+	if b:
 		f = nltk.FreqDist(b)
 		u_gram = f.most_common(1)[0][0]
 		u_gram_score = f.most_common(1)[0][1]
-		
+
 	return (u_gram,u_gram_score)
 	
 #common_strings(start,end):
@@ -181,9 +172,9 @@ def source_file_strings(start,end):
 def common_strings(start,end):
 	CS_THRESHOLD = 6
 	sep = "tvlwz"
-	
+
 	tokens = string_range_tokenize(start,end,sep)
-	
+
 	#make a copy since we're going to edit it
 	u_tokens = tokens
 	c=0
@@ -192,22 +183,22 @@ def common_strings(start,end):
 			del u_tokens[c]
 		else:
 			c+=1
-	
+
 	print("common_strings tokens:")
 	print(tokens)
-	
+
 	if len(u_tokens) < CS_THRESHOLD:
 		#print "%08x - %08x : %s" % (start,end,"no string")
 		return ("",0)	
-	
+
 	f = nltk.FreqDist(u_tokens)
 	u_gram = f.most_common(1)[0][0]
 	u_gram_score = f.most_common(1)[0][1]
-	
+
 	#print "Tokens:"
 	#print tokens
 	#print len(tokens)
-	
+
 	bgs = list(nltk.bigrams(tokens))
 	c=0
 	while (c<len(bgs)):
@@ -215,20 +206,20 @@ def common_strings(start,end):
 			del bgs[c]
 		else:
 			c+=1
-	
+
 	#print "Bigrams:"
 	#print bgs
-	if (len(bgs) != 0):
+	if bgs:
 		fs = nltk.FreqDist(bgs)
 		b_gram = fs.most_common(1)[0][0]
 		#print "Most Common:"
 		#print b_gram
-		b_str = b_gram[0] + "_" + b_gram[1]
+		b_str = f"{b_gram[0]}_{b_gram[1]}"
 		b_gram_score = fs.most_common(1)[0][1]
 	else:
 		b_str =""
 		b_gram_score = 0
-		
+
 	tgs = list(nltk.trigrams(tokens))
 	c=0
 	while (c<len(tgs)):
@@ -238,18 +229,18 @@ def common_strings(start,end):
 			c+=1
 	#print "Trigrams:"
 	#print tgs
-	if (len(tgs) != 0):
+	if tgs:
 		ft = nltk.FreqDist(tgs)
 		t_gram = ft.most_common(1)[0][0]
-		t_str = t_gram[0] + "_" + t_gram[1] + "_" + t_gram[2]
+		t_str = f"{t_gram[0]}_{t_gram[1]}_{t_gram[2]}"
 		t_gram_score = ft.most_common(1)[0][1]
 	else:
 		t_str = ""
 		t_gram_score = 0
-		
-	
+
+
 	#print "1: %s - %d 2: %s - %d 3: %s - %d\n" % (u_gram,u_gram_score,b_str,b_gram_score,t_str,t_gram_score)
-	
+
 	if (b_gram_score * 2 >= u_gram_score):
 		if (t_gram_score * 2 >= b_gram_score):
 			ret = t_str
@@ -260,9 +251,9 @@ def common_strings(start,end):
 	else:
 		ret = u_gram
 		ret_s = u_gram_score
-	
+
 	#print "%08x - %08x : %s" % (start,end,ret)
-	
+
 	return (ret,ret_s)
 
 ### End of NLP Section ###	

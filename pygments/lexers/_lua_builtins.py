@@ -188,10 +188,7 @@ if __name__ == '__main__':  # pragma: no cover
             return name.startswith('coroutine.')
 
         def is_in_modules_module(name):
-            if name in ['require', 'module'] or name.startswith('package'):
-                return True
-            else:
-                return False
+            return bool(name in ['require', 'module'] or name.startswith('package'))
 
         def is_in_string_module(name):
             return name.startswith('string.')
@@ -231,7 +228,7 @@ if __name__ == '__main__':  # pragma: no cover
                 return m.groups()[0]
 
     def get_lua_functions(version):
-        f = urlopen('http://www.lua.org/manual/%s/' % version)
+        f = urlopen(f'http://www.lua.org/manual/{version}/')
         r = re.compile(r'^<A HREF="manual.html#pdf-(?!lua|LUA)([^:]+)">\1</A>')
         functions = []
         for line in f:
@@ -244,10 +241,7 @@ if __name__ == '__main__':  # pragma: no cover
         for mod, cb in module_callbacks().items():
             if cb(name):
                 return mod
-        if '.' in name:
-            return name.split('.')[0]
-        else:
-            return 'basic'
+        return name.split('.')[0] if '.' in name else 'basic'
 
     def regenerate(filename, modules):
         with open(filename) as fp:
@@ -266,7 +260,7 @@ if __name__ == '__main__':  # pragma: no cover
         version = get_newest_version()
         functions = set()
         for v in ('5.2', version):
-            print('> Downloading function index for Lua %s' % v)
+            print(f'> Downloading function index for Lua {v}')
             f = get_lua_functions(v)
             print('> %d functions found, %d new:' %
                   (len(f), len(set(f) - functions)))
@@ -276,7 +270,7 @@ if __name__ == '__main__':  # pragma: no cover
 
         modules = {}
         for full_function_name in functions:
-            print('>> %s' % full_function_name)
+            print(f'>> {full_function_name}')
             m = get_function_module(full_function_name)
             modules.setdefault(m, []).append(full_function_name)
         modules = {k: tuple(v) for k, v in modules.items()}

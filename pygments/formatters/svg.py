@@ -132,24 +132,25 @@ class SvgFormatter(Formatter):
             outfile.write('<svg xmlns="http://www.w3.org/2000/svg">\n')
             outfile.write('<g font-family="%s" font-size="%s">\n' %
                           (self.fontfamily, self.fontsize))
-        
-        counter = self.linenostart 
+
+        counter = self.linenostart
         counter_step = self.linenostep
         counter_style = self._get_style(Comment)
         line_x = x
-        
+
         if self.linenos:
             if counter % counter_step == 0:
-                outfile.write('<text x="%s" y="%s" %s text-anchor="end">%s</text>' %
-                    (x+self.linenowidth,y,counter_style,counter))
+                outfile.write(
+                    f'<text x="{x + self.linenowidth}" y="{y}" {counter_style} text-anchor="end">{counter}</text>'
+                )
             line_x += self.linenowidth + self.ystep
             counter += 1
 
-        outfile.write('<text x="%s" y="%s" xml:space="preserve">' % (line_x, y))
+        outfile.write(f'<text x="{line_x}" y="{y}" xml:space="preserve">')
         for ttype, value in tokensource:
             style = self._get_style(ttype)
-            tspan = style and '<tspan' + style + '>' or ''
-            tspanend = tspan and '</tspan>' or ''
+            tspan = style and f'<tspan{style}>' or ''
+            tspanend = '</tspan>' if tspan else ''
             value = escape_html(value)
             if self.spacehack:
                 value = value.expandtabs().replace(' ', '&#160;')
@@ -159,11 +160,12 @@ class SvgFormatter(Formatter):
                 y += self.ystep
                 outfile.write('</text>\n')
                 if self.linenos and counter % counter_step == 0:
-                    outfile.write('<text x="%s" y="%s" text-anchor="end" %s>%s</text>' %
-                        (x+self.linenowidth,y,counter_style,counter))
-                
+                    outfile.write(
+                        f'<text x="{x + self.linenowidth}" y="{y}" text-anchor="end" {counter_style}>{counter}</text>'
+                    )
+
                 counter += 1
-                outfile.write('<text x="%s" y="%s" ' 'xml:space="preserve">' % (line_x,y))
+                outfile.write(f'<text x="{line_x}" y="{y}" xml:space="preserve">')
             outfile.write(tspan + parts[-1] + tspanend)
         outfile.write('</text>')
 
@@ -177,9 +179,7 @@ class SvgFormatter(Formatter):
         while not self.style.styles_token(tokentype):
             tokentype = tokentype.parent
         value = self.style.style_for_token(tokentype)
-        result = ''
-        if value['color']:
-            result = ' fill="#' + value['color'] + '"'
+        result = ' fill="#' + value['color'] + '"' if value['color'] else ''
         if value['bold']:
             result += ' font-weight="bold"'
         if value['italic']:

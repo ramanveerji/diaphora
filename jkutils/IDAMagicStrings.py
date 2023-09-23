@@ -43,15 +43,15 @@ PROGRAM_NAME = "IMS"
 #-------------------------------------------------------------------------------
 SOURCE_FILES_REGEXP = r"([a-z_\/\\][a-z0-9_/\\:\-\.@]+\.(c|cc|cxx|c\+\+|cpp|h|hpp|m|rs|go|ml))($|:| )"
 
-LANGS = {}
-LANGS["C/C++"] = ["c", "cc", "cxx", "cpp", "h", "hpp"]
-LANGS["C"] = ["c"]
-LANGS["C++"] = ["cc", "cxx", "cpp", "hpp", "c++"]
-LANGS["Obj-C"] = ["m"]
-LANGS["Rust"] = ["rs"]
-LANGS["Golang"] = ["go"]
-LANGS["OCaml"] = ["ml"]
-
+LANGS = {
+    "C/C++": ["c", "cc", "cxx", "cpp", "h", "hpp"],
+    "C": ["c"],
+    "C++": ["cc", "cxx", "cpp", "hpp", "c++"],
+    "Obj-C": ["m"],
+    "Rust": ["rs"],
+    "Golang": ["go"],
+    "OCaml": ["ml"],
+}
 #-------------------------------------------------------------------------------
 FUNCTION_NAMES_REGEXP = r"([a-z_][a-z0-9_]+((::)+[a-z_][a-z0-9_]+)*)"
 CLASS_NAMES_REGEXP    = r"([a-z_][a-z0-9_]+(::(<[a-z0-9_]+>|~{0,1}[a-z0-9_]+))+)\({0,1}"
@@ -81,15 +81,13 @@ def nltk_preprocess(strings):
 
   strings = "\n".join(map(str, list(strings)))
   tokens = re.findall(FUNCTION_NAMES_REGEXP, strings)
-  l = []
-  for token in tokens:
-    l.append(token[0])
+  l = [token[0] for token in tokens]
   word_tags = nltk.pos_tag(l)
   for word, tag in word_tags:
     try:
       FOUND_TOKENS[word.lower()].add(tag)
     except:
-      FOUND_TOKENS[word.lower()] = set([tag])
+      FOUND_TOKENS[word.lower()] = {tag}
 
 #-------------------------------------------------------------------------------
 def get_strings(strtypes = [0, 1]):
@@ -101,10 +99,7 @@ def get_strings(strtypes = [0, 1]):
 def get_lang(full_path):
   _, file_ext  = os.path.splitext(full_path.lower())
   file_ext = file_ext.strip(".")
-  for key in LANGS:
-    if file_ext in LANGS[key]:
-      return key
-  return None
+  return next((key for key in LANGS if file_ext in LANGS[key]), None)
 
 #-------------------------------------------------------------------------------
 def add_source_file_to(d, src_langs, refs, full_path, s):
@@ -132,15 +127,14 @@ def get_source_strings(min_len = 4, strtypes = [0, 1]):
     if s and s.length > min_len:
       ret = re.findall(SOURCE_FILES_REGEXP, str(s), re.IGNORECASE)
       if ret and len(ret) > 0:
-        refs = list(DataRefsTo(s.ea))
-        if len(refs) > 0:
+        if refs := list(DataRefsTo(s.ea)):
           total_files += 1
           full_path    = ret[0][0]
           d, src_langs = add_source_file_to(d, src_langs, refs, full_path, s)
 
+  done = False
   # Use the loaded debugging information (if any) to find source files
   for f in list(Functions()):
-    done = False
     func = idaapi.get_func(f)
     if func is not None:
       cfg = idaapi.FlowChart(func)
@@ -152,7 +146,8 @@ def get_source_strings(min_len = 4, strtypes = [0, 1]):
           full_path = get_sourcefile(head)
           if full_path is not None:
             total_files += 1
-            d, src_langs = add_source_file_to(d, src_langs, [head], full_path, "Symbol: %s" % full_path)
+            d, src_langs = add_source_file_to(d, src_langs, [head], full_path,
+                                              f"Symbol: {full_path}")
 
   nltk_preprocess(strings)
   if len(d) > 0 and total_files > 0:
@@ -251,7 +246,7 @@ class CIDAMagicStringsChooser(Choose):
     self.actions = []
 
   def AddCommand(self, menu_name, shortcut=None):
-    action_name = "IDAMagicStrings:%s" % menu_name.replace(" ", "")
+    action_name = f'IDAMagicStrings:{menu_name.replace(" ", "")}'
     self.actions.append([len(self.actions), action_name, menu_name, shortcut])
     return len(self.actions)-1
 
@@ -274,9 +269,7 @@ class CSourceFilesChooser(CIDAMagicStringsChooser):
     self.selected_items = []
 
     d, s = get_source_strings()
-    keys = list(d.keys())
-    keys.sort()
-
+    keys = sorted(d.keys())
     i = 0
     for key in keys:
       for ea, name, str_data in d[key]:
@@ -303,10 +296,10 @@ class CSourceFilesChooser(CIDAMagicStringsChooser):
     if cmd_id == self.cmd_all:
       l = list(range(len(self.items)))
     elif cmd_id == self.cmd_all_sub:
-      l = []
-      for i, item in enumerate(self.items):
-        if item[4] is not None and item[4].startswith("sub_"):
-          l.append(i)
+      l = [
+          i for i, item in enumerate(self.items)
+          if item[4] is not None and item[4].startswith("sub_")
+      ]
     elif cmd_id == self.cmd_selected:
       l = list(self.selected_items)
     elif cmd_id == self.cmd_selected_sub:
@@ -336,8 +329,7 @@ class CSourceFilesChooser(CIDAMagicStringsChooser):
     return self.items[n]
 
   def OnGetSize(self):
-    n = len(self.items)
-    return n
+    return len(self.items)
 
   def OnDeleteLine(self, n):
     del self.items[n]
@@ -368,15 +360,12 @@ class CCandidateFunctionNames(CIDAMagicStringsChooser):
     self.items = []
     self.selected_items = []
 
-    idx = 0
-    for item in final_list:
+    for idx, item in enumerate(final_list):
       bin_func  = item[1]
       candidate = item[2]
       seems_false = str(int(self.looks_false(bin_func, candidate)))
       line = ["%03d" % idx, "0x%08x" % item[0], item[1], item[2], seems_false, ", ".join(item[3]) ]
       self.items.append(line)
-      idx += 1
-
     self.items = sorted(self.items, key=lambda x: x[4])
 
   def show(self):
@@ -396,10 +385,7 @@ class CCandidateFunctionNames(CIDAMagicStringsChooser):
     elif cmd_id == self.cmd_rename_selected:
       l = list(self.selected_items)
     elif cmd_id == self.cmd_rename_sub:
-      l = []
-      for i, item in enumerate(self.items):
-        if item[2].startswith("sub_"):
-          l.append(i)
+      l = [i for i, item in enumerate(self.items) if item[2].startswith("sub_")]
     elif cmd_id == self.cmd_rename_sub_sel:
       l = []
       for i, item in enumerate(self.items):
@@ -412,9 +398,7 @@ class CCandidateFunctionNames(CIDAMagicStringsChooser):
     self.rename_items(l)
 
   def rename_items(self, items):
-    idx = 0
-    for i in items:
-      idx +=1
+    for idx, i in enumerate(items, start=1):
       item = self.items[i]
       ea = int(item[1], 16)
       candidate = item[3].replace(':','')
@@ -426,8 +410,7 @@ class CCandidateFunctionNames(CIDAMagicStringsChooser):
     return self.items[n]
 
   def OnGetSize(self):
-    n = len(self.items)
-    return n
+    return len(self.items)
 
   def OnDeleteLine(self, n):
     del self.items[n]
@@ -458,9 +441,8 @@ class CCandidateFunctionNames(CIDAMagicStringsChooser):
     item = self.items[n]
     bin_func  = item[2]
     candidate = item[3]
-    if self.looks_false(bin_func, candidate):
-      return [0x026AFD, 0]
-    return [0xFFFFFF, 0]
+    return ([0x026AFD, 0]
+            if self.looks_false(bin_func, candidate) else [0xFFFFFF, 0])
 
 #-------------------------------------------------------------------------------
 class CClassXRefsChooser(idaapi.Choose):
@@ -504,10 +486,10 @@ class CClassesTreeViewer(PluginForm):
 
     self.classes = sorted(self.classes, key=lambda x: x[1][0])
     for ea, tokens in self.classes:
-      for i, node_name in enumerate(tokens):
+      for node_name in tokens:
         full_name = "::".join(tokens[:tokens.index(node_name)+1])
         if full_name not in self.nodes:
-          if full_name.find("::") == -1:
+          if "::" not in full_name:
             parent = self.tree
           else:
             parent_name = "::".join(tokens[:tokens.index(node_name)])
@@ -515,9 +497,6 @@ class CClassesTreeViewer(PluginForm):
               parent = self.nodes[parent_name]
             except Exception as e:
               print(f"[idamagic] Error {e.with_traceback} ea:{ea} parent_name: {parent_name} sys:{str(sys.exc_info()[1])} ")  #, self.nodes, parent_name, str(sys.exc_info()[1]))
-            except KeyError as e:
-              print(f"[idamagic] KeyError {e.with_traceback} ea:{ea} parent_name: {parent_name} sys:{str(sys.exc_info()[1])} ")  #, self.nodes, parent_name, str(sys.exc_info()[1]))
-
           node = QtWidgets.QTreeWidgetItem(parent)
           node.setText(0, full_name)
           node.ea = ea
@@ -598,7 +577,7 @@ class CClassesGraph(idaapi.GraphViewer):
         try:
           self.nodes_ea[node_id].add(ea)
         except KeyError:
-          self.nodes_ea[node_id] = set([ea])
+          self.nodes_ea[node_id] = {ea}
 
         parent_name = "::".join(tokens[:tokens.index(node_name)])
         if parent_name != "" and parent_name in self.nodes:
@@ -641,58 +620,54 @@ class CClassesGraph(idaapi.GraphViewer):
 
         items.append(["0x%08x" % ea, repr(s)])
 
-      chooser = CClassXRefsChooser("XRefs to %s" % str(self[node_id]), items)
+      chooser = CClassXRefsChooser(f"XRefs to {str(self[node_id])}", items)
       idx = chooser.Show(1)
       if idx > -1:
         jumpto(list(eas)[idx])
 
   def OnCommand(self, cmd_id):
     if self.cmd_dot == cmd_id:
-      fname = ask_file(1, "*.dot", "Dot file name")
-      if fname:
-        f = open(fname, "w")
-        buf = 'digraph G {\n graph [overlap=scale]; node [fontname=Courier]; \n\n'
-        for n in self.graph:
-          name = str(self[n])
-          buf += ' a%s [shape=box, label = "%s", color="blue"]\n' % (n, name)
-        buf += '\n'
+      if fname := ask_file(1, "*.dot", "Dot file name"):
+        with open(fname, "w") as f:
+          buf = 'digraph G {\n graph [overlap=scale]; node [fontname=Courier]; \n\n'
+          for n in self.graph:
+            name = str(self[n])
+            buf += ' a%s [shape=box, label = "%s", color="blue"]\n' % (n, name)
+          buf += '\n'
 
-        dones = set()
-        for node_id in self.graph:
-          for child_id in self.graph[node_id]:
-            s = str([node_id, child_id])
-            if s in dones:
-              continue
-            dones.add(s)
-            buf += " a%s -> a%s [style = bold]\n" % (node_id, child_id)
+          dones = set()
+          for node_id in self.graph:
+            for child_id in self.graph[node_id]:
+              s = str([node_id, child_id])
+              if s in dones:
+                continue
+              dones.add(s)
+              buf += " a%s -> a%s [style = bold]\n" % (node_id, child_id)
 
-        buf += '\n'
-        buf += '}'
-        f.write(buf)
-        f.close()
+          buf += '\n'
+          buf += '}'
+          f.write(buf)
     elif self.cmd_gml == cmd_id:
-      fname = ask_file(1, "*.gml", "GML file name")
-      if fname:
-        f = open(fname, "w")
-        buf = 'graph [ \n'
-        for n in self.graph:
-          name = str(self[n])
-          buf += 'node [ id %s \n label "%s"\n fill "blue" \n type "oval"\n LabelGraphics [ type "text" ] ] \n' % (n, name)
-        buf += '\n'
+      if fname := ask_file(1, "*.gml", "GML file name"):
+        with open(fname, "w") as f:
+          buf = 'graph [ \n'
+          for n in self.graph:
+            name = str(self[n])
+            buf += 'node [ id %s \n label "%s"\n fill "blue" \n type "oval"\n LabelGraphics [ type "text" ] ] \n' % (n, name)
+          buf += '\n'
 
-        dones = set()
-        for node_id in self.graph:
-          for child_id in self.graph[node_id]:
-            s = str([node_id, child_id])
-            if s in dones:
-              continue
-            dones.add(s)
-            buf += " edge [ source %s \n target %s ]\n" % (node_id, child_id)
+          dones = set()
+          for node_id in self.graph:
+            for child_id in self.graph[node_id]:
+              s = str([node_id, child_id])
+              if s in dones:
+                continue
+              dones.add(s)
+              buf += " edge [ source %s \n target %s ]\n" % (node_id, child_id)
 
-        buf += '\n'
-        buf += ']'
-        f.write(buf)
-        f.close()
+          buf += '\n'
+          buf += ']'
+          f.write(buf)
 
   def OnPopup(self, form, popup_handle):
     self.cmd_dot = 0
@@ -712,14 +687,12 @@ class CClassesGraph(idaapi.GraphViewer):
     return True
 
   def Show(self):
-    if not idaapi.GraphViewer.Show(self):
-      return False
-    return True
+    return bool(idaapi.GraphViewer.Show(self))
 
 #-------------------------------------------------------------------------------
 def show_tree(d = None):
   tree_frm = CBaseTreeViewer()
-  tree_frm.Show(PROGRAM_NAME + ": Source code tree", d)
+  tree_frm.Show(f"{PROGRAM_NAME}: Source code tree", d)
 
 #-------------------------------------------------------------------------------
 def seems_function_name(candidate):
@@ -793,29 +766,24 @@ def find_function_names(strings_list):
               if candidate not in FOUND_TOKENS:
                 continue
 
-              found = False
-              for tkn_type in TOKEN_TYPES:
-                if tkn_type in FOUND_TOKENS[candidate]:
-                  found = True
-                  break
-
+              found = any(tkn_type in FOUND_TOKENS[candidate] for tkn_type in TOKEN_TYPES)
               if not found:
                 continue
 
             try:
               rarity[candidate].add(key)
             except KeyError:
-              rarity[candidate] = set([key])
+              rarity[candidate] = {key}
 
             try:
               func_names[key].add(candidate)
             except KeyError:
-              func_names[key] = set([candidate])
+              func_names[key] = {candidate}
 
             try:
               raw_func_strings[key].add(str(s))
             except:
-              raw_func_strings[key] = set([str(s)])
+              raw_func_strings[key] = {str(s)}
 
   return func_names, raw_func_strings, rarity, class_objects
 
@@ -844,16 +812,18 @@ def show_function_names(strings_list):
       final_list.append([key, func_name, list(candidates)[0], raw_strings])
 
   if len(classes) > 0:
-    class_graph = CClassesGraph(PROGRAM_NAME + ": Classes Hierarchy", classes, final_list)
+    class_graph = CClassesGraph(f"{PROGRAM_NAME}: Classes Hierarchy", classes,
+                                final_list)
     class_graph.Show()
 
     class_tree = CClassesTreeViewer()
-    class_tree.Show(PROGRAM_NAME + ": Classes Tree", classes)
+    class_tree.Show(f"{PROGRAM_NAME}: Classes Tree", classes)
 
     final_list = class_graph.final_list
 
   if len(final_list) > 0:
-    cfn = CCandidateFunctionNames(PROGRAM_NAME + ": Candidate Function Names", final_list)
+    cfn = CCandidateFunctionNames(f"{PROGRAM_NAME}: Candidate Function Names",
+                                  final_list)
     cfn.show()
 
 #-------------------------------------------------------------------------------
@@ -880,7 +850,7 @@ def PLUGIN_ENTRY():
     return magicstrings()
 
 def main():
-  ch = CSourceFilesChooser(PROGRAM_NAME + ": Source code files")
+  ch = CSourceFilesChooser(f"{PROGRAM_NAME}: Source code files")
   if len(ch.items) > 0:
     ch.show()
 

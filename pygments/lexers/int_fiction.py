@@ -528,11 +528,11 @@ class Inform6Lexer(RegexLexer):
         while objectloop_queue:
             yield objectloop_queue.pop(0)
 
-    def analyse_text(text):
+    def analyse_text(self):
         """We try to find a keyword which seem relatively common, unfortunately
         there is a decent overlap with Smalltalk keywords otherwise here.."""
         result = 0
-        if re.search('\borigsource\b', text, re.IGNORECASE):
+        if re.search('\borigsource\b', self, re.IGNORECASE):
             result += 0.05
 
         return result
@@ -779,18 +779,21 @@ class Tads3Lexer(RegexLexer):
     _ws = r'(?:\\|\s|%s|%s)' % (_comment_single, _comment_multiline)
     _ws_pp = r'(?:\\\n|[^\S\n]|%s|%s)' % (_comment_single, _comment_multiline)
 
-    def _make_string_state(triple, double, verbatim=None, _escape=_escape):
+    def _make_string_state(self, double, verbatim=None, _escape=_escape):
         if verbatim:
-            verbatim = ''.join(['(?:%s|%s)' % (re.escape(c.lower()),
-                                               re.escape(c.upper()))
-                                for c in verbatim])
+            verbatim = ''.join(
+                [
+                    f'(?:{re.escape(c.lower())}|{re.escape(c.upper())})'
+                    for c in verbatim
+                ]
+            )
         char = r'"' if double else r"'"
         token = String.Double if double else String.Single
-        escaped_quotes = r'+|%s(?!%s{2})' % (char, char) if triple else r''
-        prefix = '%s%s' % ('t' if triple else '', 'd' if double else 's')
-        tag_state_name = '%sqt' % prefix
+        escaped_quotes = r'+|%s(?!%s{2})' % (char, char) if self else r''
+        prefix = f"{'t' if self else ''}{'d' if double else 's'}"
+        tag_state_name = f'{prefix}qt'
         state = []
-        if triple:
+        if self:
             state += [
                 (r'%s{3,}' % char, token, '#pop'),
                 (r'\\%s+' % char, String.Escape),
@@ -805,21 +808,37 @@ class Tads3Lexer(RegexLexer):
         if verbatim:
             # This regex can't use `(?i)` because escape sequences are
             # case-sensitive. `<\XMP>` works; `<\xmp>` doesn't.
-            state.append((r'\\?<(/|\\\\|(?!%s)\\)%s(?=[\s=>])' %
-                          (_escape, verbatim),
-                          Name.Tag, ('#pop', '%sqs' % prefix, tag_state_name)))
+            state.append(
+                (
+                    r'\\?<(/|\\\\|(?!%s)\\)%s(?=[\s=>])' % (_escape, verbatim),
+                    Name.Tag,
+                    ('#pop', f'{prefix}qs', tag_state_name),
+                )
+            )
         else:
             state += [
-                (r'\\?<!([^><\\%s]|<(?!<)|\\%s%s|%s|\\.)*>?' %
-                 (char, char, escaped_quotes, _escape), Comment.Multiline),
-                (r'(?i)\\?<listing(?=[\s=>]|\\>)', Name.Tag,
-                 ('#pop', '%sqs/listing' % prefix, tag_state_name)),
-                (r'(?i)\\?<xmp(?=[\s=>]|\\>)', Name.Tag,
-                 ('#pop', '%sqs/xmp' % prefix, tag_state_name)),
-                (r'\\?<([^\s=><\\%s]|<(?!<)|\\%s%s|%s|\\.)*' %
-                 (char, char, escaped_quotes, _escape), Name.Tag,
-                 tag_state_name),
-                include('s/entity')
+                (
+                    r'\\?<!([^><\\%s]|<(?!<)|\\%s%s|%s|\\.)*>?'
+                    % (char, char, escaped_quotes, _escape),
+                    Comment.Multiline,
+                ),
+                (
+                    r'(?i)\\?<listing(?=[\s=>]|\\>)',
+                    Name.Tag,
+                    ('#pop', f'{prefix}qs/listing', tag_state_name),
+                ),
+                (
+                    r'(?i)\\?<xmp(?=[\s=>]|\\>)',
+                    Name.Tag,
+                    ('#pop', f'{prefix}qs/xmp', tag_state_name),
+                ),
+                (
+                    r'\\?<([^\s=><\\%s]|<(?!<)|\\%s%s|%s|\\.)*'
+                    % (char, char, escaped_quotes, _escape),
+                    Name.Tag,
+                    tag_state_name,
+                ),
+                include('s/entity'),
             ]
         state += [
             include('s/escape'),
@@ -829,52 +848,76 @@ class Tads3Lexer(RegexLexer):
         ]
         return state
 
-    def _make_tag_state(triple, double, _escape=_escape):
+    def _make_tag_state(self, double, _escape=_escape):
         char = r'"' if double else r"'"
-        quantifier = r'{3,}' if triple else r''
-        state_name = '%s%sqt' % ('t' if triple else '', 'd' if double else 's')
+        quantifier = r'{3,}' if self else r''
+        state_name = f"{'t' if self else ''}{'d' if double else 's'}qt"
         token = String.Double if double else String.Single
-        escaped_quotes = r'+|%s(?!%s{2})' % (char, char) if triple else r''
+        escaped_quotes = r'+|%s(?!%s{2})' % (char, char) if self else r''
         return [
-            (r'%s%s' % (char, quantifier), token, '#pop:2'),
+            (f'{char}{quantifier}', token, '#pop:2'),
             (r'(\s|\\\n)+', Text),
-            (r'(=)(\\?")', bygroups(Punctuation, String.Double),
-             'dqs/%s' % state_name),
-            (r"(=)(\\?')", bygroups(Punctuation, String.Single),
-             'sqs/%s' % state_name),
-            (r'=', Punctuation, 'uqs/%s' % state_name),
+            (
+                r'(=)(\\?")',
+                bygroups(Punctuation, String.Double),
+                f'dqs/{state_name}',
+            ),
+            (
+                r"(=)(\\?')",
+                bygroups(Punctuation, String.Single),
+                f'sqs/{state_name}',
+            ),
+            (r'=', Punctuation, f'uqs/{state_name}'),
             (r'\\?>', Name.Tag, '#pop'),
-            (r'\{([^}<\\%s]|<(?!<)|\\%s%s|%s|\\.)*\}' %
-             (char, char, escaped_quotes, _escape), String.Interpol),
-            (r'([^\s=><\\%s]|<(?!<)|\\%s%s|%s|\\.)+' %
-             (char, char, escaped_quotes, _escape), Name.Attribute),
+            (
+                r'\{([^}<\\%s]|<(?!<)|\\%s%s|%s|\\.)*\}'
+                % (char, char, escaped_quotes, _escape),
+                String.Interpol,
+            ),
+            (
+                r'([^\s=><\\%s]|<(?!<)|\\%s%s|%s|\\.)+'
+                % (char, char, escaped_quotes, _escape),
+                Name.Attribute,
+            ),
             include('s/escape'),
             include('s/verbatim'),
             include('s/entity'),
-            (r'[\\{}&]', Name.Attribute)
+            (r'[\\{}&]', Name.Attribute),
         ]
 
-    def _make_attribute_value_state(terminator, host_triple, host_double,
-                                    _escape=_escape):
-        token = (String.Double if terminator == r'"' else
-                 String.Single if terminator == r"'" else String.Other)
+    def _make_attribute_value_state(self, host_triple, host_double, _escape=_escape):
+        token = (
+            String.Double
+            if self == r'"'
+            else String.Single
+            if self == r"'"
+            else String.Other
+        )
         host_char = r'"' if host_double else r"'"
         host_quantifier = r'{3,}' if host_triple else r''
         host_token = String.Double if host_double else String.Single
         escaped_quotes = (r'+|%s(?!%s{2})' % (host_char, host_char)
                           if host_triple else r'')
         return [
-            (r'%s%s' % (host_char, host_quantifier), host_token, '#pop:3'),
-            (r'%s%s' % (r'' if token is String.Other else r'\\?', terminator),
-             token, '#pop'),
+            (f'{host_char}{host_quantifier}', host_token, '#pop:3'),
+            (
+                r'%s%s' % (r'' if token is String.Other else r'\\?', self),
+                token,
+                '#pop',
+            ),
             include('s/verbatim'),
             include('s/entity'),
-            (r'\{([^}<\\%s]|<(?!<)|\\%s%s|%s|\\.)*\}' %
-             (host_char, host_char, escaped_quotes, _escape), String.Interpol),
-            (r'([^\s"\'<%s{}\\&])+' % (r'>' if token is String.Other else r''),
-             token),
+            (
+                r'\{([^}<\\%s]|<(?!<)|\\%s%s|%s|\\.)*\}'
+                % (host_char, host_char, escaped_quotes, _escape),
+                String.Interpol,
+            ),
+            (
+                r'([^\s"\'<%s{}\\&])+' % (r'>' if token is String.Other else r''),
+                token,
+            ),
             include('s/escape'),
-            (r'["\'\s&{<}\\]', token)
+            (r'["\'\s&{<}\\]', token),
         ]
 
     tokens = {
@@ -1343,7 +1386,7 @@ class Tads3Lexer(RegexLexer):
     }
 
     def get_tokens_unprocessed(self, text, **kwargs):
-        pp = r'^%s*#%s*' % (self._ws_pp, self._ws_pp)
+        pp = f'^{self._ws_pp}*#{self._ws_pp}*'
         if_false_level = 0
         for index, token, value in (
             RegexLexer.get_tokens_unprocessed(self, text, **kwargs)):
@@ -1352,29 +1395,28 @@ class Tads3Lexer(RegexLexer):
                     re.match(r'%sif%s+(0|nil)%s*$\n?' %
                              (pp, self._ws_pp, self._ws_pp), value)):
                     if_false_level = 1
-            else:  # In a false #if
-                if token is Comment.Preproc:
-                    if (if_false_level == 1 and
+            elif token is Comment.Preproc:
+                if (if_false_level == 1 and
                           re.match(r'%sel(if|se)\b' % pp, value)):
-                        if_false_level = 0
-                    elif re.match(r'%sif' % pp, value):
-                        if_false_level += 1
-                    elif re.match(r'%sendif\b' % pp, value):
-                        if_false_level -= 1
-                else:
-                    token = Comment
+                    if_false_level = 0
+                elif re.match(f'{pp}if', value):
+                    if_false_level += 1
+                elif re.match(r'%sendif\b' % pp, value):
+                    if_false_level -= 1
+            else:
+                token = Comment
             yield index, token, value
 
-    def analyse_text(text):
+    def analyse_text(self):
         """This is a rather generic descriptive language without strong
         identifiers. It looks like a 'GameMainDef' has to be present,
         and/or a 'versionInfo' with an 'IFID' field."""
         result = 0
-        if '__TADS' in text or 'GameMainDef' in text:
+        if '__TADS' in self or 'GameMainDef' in self:
             result += 0.2
 
         # This is a fairly unique keyword which is likely used in source as well
-        if 'versionInfo' in text and 'IFID' in text:
+        if 'versionInfo' in self and 'IFID' in self:
             result += 0.1
 
         return result

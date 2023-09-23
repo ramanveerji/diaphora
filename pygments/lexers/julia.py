@@ -231,8 +231,8 @@ class JuliaLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
-        return shebang_matches(text, r'julia')
+    def analyse_text(self):
+        return shebang_matches(self, r'julia')
 
 
 class JuliaConsoleLexer(Lexer):

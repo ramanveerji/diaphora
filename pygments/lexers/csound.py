@@ -212,23 +212,22 @@ class CsoundOrchestraLexer(CsoundLexer):
 
     user_defined_opcodes = set()
 
-    def opcode_name_callback(lexer, match):
+    def opcode_name_callback(self, match):
         opcode = match.group(0)
-        lexer.user_defined_opcodes.add(opcode)
+        self.user_defined_opcodes.add(opcode)
         yield match.start(), Name.Function, opcode
 
-    def name_callback(lexer, match):
+    def name_callback(self, match):
         type_annotation_token = Keyword.Type
 
         name = match.group(1)
         if name in OPCODES or name in DEPRECATED_OPCODES or name in REMOVED_OPCODES:
             yield match.start(), Name.Builtin, name
-        elif name in lexer.user_defined_opcodes:
+        elif name in self.user_defined_opcodes:
             yield match.start(), Name.Function, name
         else:
             type_annotation_token = Name
-            name_match = re.search(r'^(g?[afikSw])(\w+)', name)
-            if name_match:
+            if name_match := re.search(r'^(g?[afikSw])(\w+)', name):
                 yield name_match.start(1), Keyword.Type, name_match.group(1)
                 yield name_match.start(2), Name, name_match.group(2)
             else:

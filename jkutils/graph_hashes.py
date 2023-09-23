@@ -101,7 +101,7 @@ class CKoretKaramitasHash:
     func = get_func(f)
     if func is None:
       return "NO-FUNCTION"
-    
+
     flow = FlowChart(func)
     if flow is None:
       return "NO-FLOW-GRAPH"
@@ -129,8 +129,7 @@ class CKoretKaramitasHash:
         if self.is_call_insn(ea):
           hash *= FEATURE_CALL
 
-        l = list(DataRefsFrom(ea))
-        if len(l) > 0:
+        if l := list(DataRefsFrom(ea)):
           hash *= FEATURE_DATA_REFS
 
         for xref in CodeRefsFrom(ea, 0):
@@ -138,13 +137,7 @@ class CKoretKaramitasHash:
           if tmp_func is None or tmp_func.start_ea != func.start_ea:
             hash *= FEATURE_CALL_REF
 
-        # Remember the relationships
-        bb_relations[block_ea] = []
-
-        # Iterate the succesors of this basic block
-        for succ_block in block.succs():
-          bb_relations[block_ea].append(succ_block.start_ea)
-
+        bb_relations[block_ea] = [succ_block.start_ea for succ_block in block.succs()]
         # Iterate the predecessors of this basic block
         for pred_block in block.preds():
           try:
@@ -159,15 +152,14 @@ class CKoretKaramitasHash:
       for sc in strongly_connected:
         if len(sc) > 1:
           hash *= FEATURE_LOOP
-        else:
-          if sc[0] in bb_relations and sc[0] in bb_relations[sc[0]]:
-            hash *= FEATURE_LOOP
+        elif sc[0] in bb_relations and sc[0] in bb_relations[sc[0]]:
+          hash *= FEATURE_LOOP
 
       # And, also, use the number of strongly connected components
       # to calculate another part of the hash.
       hash *= (FEATURE_STRONGLY_CONNECTED ** len(strongly_connected))
     except:
-      print("Exception:", str(sys.exc_info()[1]))
+      print("Exception:", sys.exc_info()[1])
 
     flags = get_func_attr(f, FUNCATTR_FLAGS)
     if flags & FUNC_NORET:

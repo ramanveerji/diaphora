@@ -77,23 +77,12 @@ def func_callers_weight(f):
 		#print "%08x:  %08x %d " % (f, xref, dist),
 		if dist > MAX_CALL:
 			continue
-		if (dist != 0):
-			logdist = math.log(dist)
-		else: #recursive function call
-			logdist = 0
-		if (xref - f < 0):
-			o = -logdist
-		else:
-			o = logdist
-			#print " %f " % o,
+		logdist = math.log(dist) if (dist != 0) else 0
+		o = -logdist if (xref - f < 0) else logdist
 		fs += o
 		fc += 1
 
-	if fc == 0:
-		score = 0
-	else:		
-		score = fs / fc
-	return score
+	return 0 if fc == 0 else fs / fc
 
 #func_callee_weight(f):
 #Return the LFA score for calls where this function is the "callee" (i.e. the "calls to" score)
@@ -103,29 +92,18 @@ def func_callee_weight(f):
 	fs = 0
 	a = 0
 	for xref in basicutils.CodeRefsTo(f):
-	
+
 		dist = abs(xref - f)
 		#print "%08x:  %08x %d " % (f, xref, dist),
 		if dist > MAX_CALL:
 			continue
-		if (dist != 0):
-			logdist = math.log(dist)
-		else: #recursive function call
-			logdist = 0
-		if (xref - f < 0):
-			o = -logdist
-		else:
-			o = logdist
-			#print " %f " % o,
+		logdist = math.log(dist) if (dist != 0) else 0
+		o = -logdist if (xref - f < 0) else logdist
 		fs += o
 		fc += 1
 
-		
-	if fc == 0:
-		score = 0
-	else:		
-		score = fs / fc
-	return score
+
+	return 0 if fc == 0 else fs / fc
 	
 #func_call_weight(start,end):
 #Iterate over each function in the range and calculated the LFA scores
@@ -217,9 +195,8 @@ def get_last_three(index):
 		i-=1
 	if (c==3):
 		return p[0],p[1],p[2]
-	else:
-		print("Error: could not find 3 scored entries before index: %d  (%d,%d)" % (index, i, c))
-		return 0,0,0
+	print("Error: could not find 3 scored entries before index: %d  (%d,%d)" % (index, i, c))
+	return 0,0,0
 
 def get_lfa_start():
 	c=0;
@@ -238,22 +215,22 @@ def get_lfa_start():
 def edge_detect():
 	global g_function_list
 	global g_module_list
-	
+
 	#For published research
 	EDGE_THRESHOLD = 2
-	
+
 	c=get_lfa_start()
 	#do edge detection
 	while (c<len(g_function_list)):
 		if (g_function_list[c].lfa_skip == 0):
 			f_1,f_2,f_3 = get_last_three(c)
 			p_1 = f_1.total_score
-			p_2 = f_2.total_score
-			p_3 = f_3.total_score
 			s = g_function_list[c].total_score
 			#if score is positive and it is diff of at least 2 from previous
 			#and the previous function was not an edge
-			if ((not f_1.edge[0] == 1) and (s > 0) and ((s - p_1) > EDGE_THRESHOLD)):
+			if f_1.edge[0] != 1 and s > 0 and (s - p_1) > EDGE_THRESHOLD:
+				p_2 = f_2.total_score
+				p_3 = f_3.total_score
 				#if 2 of last 3 were negative
 				m = sorted([p_1,p_2,p_3])
 				if (m[1] < 0):

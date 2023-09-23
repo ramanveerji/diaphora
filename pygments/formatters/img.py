@@ -82,16 +82,18 @@ class FontManager:
             self._create_nix()
 
     def _get_nix_font_path(self, name, style):
-        proc = subprocess.Popen(['fc-list', "%s:style=%s" % (name, style), 'file'],
-                                stdout=subprocess.PIPE, stderr=None)
+        proc = subprocess.Popen(
+            ['fc-list', f"{name}:style={style}", 'file'],
+            stdout=subprocess.PIPE,
+            stderr=None,
+        )
         stdout, _ = proc.communicate()
         if proc.returncode == 0:
             lines = stdout.splitlines()
             for line in lines:
                 if line.startswith(b'Fontconfig warning:'):
                     continue
-                path = line.decode().strip().strip(':')
-                if path:
+                if path := line.decode().strip().strip(':'):
                     return path
             return None
 
@@ -102,8 +104,7 @@ class FontManager:
                 self.fonts['NORMAL'] = ImageFont.truetype(path, self.font_size)
                 break
         else:
-            raise FontNotFound('No usable fonts named: "%s"' %
-                               self.font_name)
+            raise FontNotFound(f'No usable fonts named: "{self.font_name}"')
         for style in ('ITALIC', 'BOLD', 'BOLDITALIC'):
             for stylename in STYLES[style]:
                 path = self._get_nix_font_path(self.font_name, stylename)
@@ -117,7 +118,7 @@ class FontManager:
                     self.fonts[style] = self.fonts['NORMAL']
 
     def _get_mac_font_path(self, font_map, name, style):
-        return font_map.get((name + ' ' + style).strip().lower())
+        return font_map.get(f'{name} {style}'.strip().lower())
 
     def _create_mac(self):
         font_map = {}
@@ -134,8 +135,7 @@ class FontManager:
                 self.fonts['NORMAL'] = ImageFont.truetype(path, self.font_size)
                 break
         else:
-            raise FontNotFound('No usable fonts named: "%s"' %
-                               self.font_name)
+            raise FontNotFound(f'No usable fonts named: "{self.font_name}"')
         for style in ('ITALIC', 'BOLD', 'BOLDITALIC'):
             for stylename in STYLES[style]:
                 path = self._get_mac_font_path(font_map, self.font_name, stylename)
@@ -152,15 +152,14 @@ class FontManager:
         for suffix in ('', ' (TrueType)'):
             for style in styles:
                 try:
-                    valname = '%s%s%s' % (basename, style and ' '+style, suffix)
+                    valname = f"{basename}{style and f' {style}'}{suffix}"
                     val, _ = _winreg.QueryValueEx(key, valname)
                     return val
                 except OSError:
                     continue
         else:
             if fail:
-                raise FontNotFound('Font %s (%s) not found in registry' %
-                                   (basename, styles[0]))
+                raise FontNotFound(f'Font {basename} ({styles[0]}) not found in registry')
             return None
 
     def _create_win(self):
@@ -176,14 +175,14 @@ class FontManager:
                     path = self._lookup_win(key, self.font_name, STYLES['NORMAL'], True)
                     self.fonts['NORMAL'] = ImageFont.truetype(path, self.font_size)
                     for style in ('ITALIC', 'BOLD', 'BOLDITALIC'):
-                        path = self._lookup_win(key, self.font_name, STYLES[style])
-                        if path:
+                        if path := self._lookup_win(
+                            key, self.font_name, STYLES[style]
+                        ):
                             self.fonts[style] = ImageFont.truetype(path, self.font_size)
+                        elif style == 'BOLDITALIC':
+                            self.fonts[style] = self.fonts['BOLD']
                         else:
-                            if style == 'BOLDITALIC':
-                                self.fonts[style] = self.fonts['BOLD']
-                            else:
-                                self.fonts[style] = self.fonts['NORMAL']
+                            self.fonts[style] = self.fonts['NORMAL']
                     return
                 except FontNotFound as err:
                     lookuperror = err
@@ -450,21 +449,13 @@ class ImageFormatter(Formatter):
         """
         Get the correct color for the token from the style.
         """
-        if style['color'] is not None:
-            fill = '#' + style['color']
-        else:
-            fill = '#000'
-        return fill
+        return '#' + style['color'] if style['color'] is not None else '#000'
 
     def _get_text_bg_color(self, style):
         """
         Get the correct background color for the token from the style.
         """
-        if style['bgcolor'] is not None:
-            bg_color = '#' + style['bgcolor']
-        else:
-            bg_color = None
-        return bg_color
+        return '#' + style['bgcolor'] if style['bgcolor'] is not None else None
 
     def _get_style_font(self, style):
         """
@@ -515,8 +506,7 @@ class ImageFormatter(Formatter):
             lines = value.splitlines(True)
             # print lines
             for i, line in enumerate(lines):
-                temp = line.rstrip('\n')
-                if temp:
+                if temp := line.rstrip('\n'):
                     self._draw_text(
                         self._get_text_pos(linelength, lineno),
                         temp,

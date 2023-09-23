@@ -129,15 +129,15 @@ class VerilogLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """Verilog code will use one of reg/wire/assign for sure, and that
         is not common elsewhere."""
         result = 0
-        if 'reg' in text:
+        if 'reg' in self:
             result += 0.1
-        if 'wire' in text:
+        if 'wire' in self:
             result += 0.1
-        if 'assign' in text:
+        if 'assign' in self:
             result += 0.1
 
         return result

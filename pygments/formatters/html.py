@@ -44,7 +44,7 @@ def webify(color):
     if color.startswith('calc') or color.startswith('var'):
         return color
     else:
-        return '#' + color
+        return f'#{color}'
 
 
 def _get_ttype_class(ttype):
@@ -53,7 +53,7 @@ def _get_ttype_class(ttype):
         return fname
     aname = ''
     while fname is None:
-        aname = '-' + ttype[-1] + aname
+        aname = f'-{ttype[-1]}{aname}'
         ttype = ttype.parent
         fname = STANDARD_TYPES.get(ttype)
     return fname + aname
@@ -461,8 +461,7 @@ class HtmlFormatter(Formatter):
     def _get_css_class(self, ttype):
         """Return the css class of this token type prefixed with
         the classprefix option."""
-        ttypeclass = _get_ttype_class(ttype)
-        if ttypeclass:
+        if ttypeclass := _get_ttype_class(ttype):
             return self.classprefix + ttypeclass
         return ''
 
@@ -471,7 +470,7 @@ class HtmlFormatter(Formatter):
         cls = self._get_css_class(ttype)
         while ttype not in STANDARD_TYPES:
             ttype = ttype.parent
-            cls = self._get_css_class(ttype) + ' ' + cls
+            cls = f'{self._get_css_class(ttype)} {cls}'
         return cls or ''
 
     def _get_css_inline_styles(self, ttype):
@@ -489,7 +488,7 @@ class HtmlFormatter(Formatter):
             name = self._get_css_class(ttype)
             style = ''
             if ndef['color']:
-                style += 'color: %s; ' % webify(ndef['color'])
+                style += f"color: {webify(ndef['color'])}; "
             if ndef['bold']:
                 style += 'font-weight: bold; '
             if ndef['italic']:
@@ -497,9 +496,9 @@ class HtmlFormatter(Formatter):
             if ndef['underline']:
                 style += 'text-decoration: underline; '
             if ndef['bgcolor']:
-                style += 'background-color: %s; ' % webify(ndef['bgcolor'])
+                style += f"background-color: {webify(ndef['bgcolor'])}; "
             if ndef['border']:
-                style += 'border: 1px solid %s; ' % webify(ndef['border'])
+                style += f"border: 1px solid {webify(ndef['border'])}; "
             if style:
                 t2c[ttype] = name
                 # save len(ttype) to enable ordering the styles by
@@ -530,12 +529,10 @@ class HtmlFormatter(Formatter):
         ]
         styles.sort()
 
-        lines = [
+        return [
             '%s { %s } /* %s */' % (prefix(cls), style, repr(ttype)[6:])
             for (level, ttype, cls, style) in styles
         ]
-
-        return lines
 
     def get_background_style_defs(self, arg=None):
         prefix = self.get_css_prefix(arg)
@@ -547,7 +544,7 @@ class HtmlFormatter(Formatter):
         if arg and not self.nobackground and bg_color is not None:
             text_style = ''
             if Text in self.ttype2class:
-                text_style = ' ' + self.class2style[self.ttype2class[Text]][0]
+                text_style = f' {self.class2style[self.ttype2class[Text]][0]}'
             lines.insert(
                 0, '%s{ background: %s;%s }' % (
                     prefix(''), bg_color, text_style
@@ -561,7 +558,7 @@ class HtmlFormatter(Formatter):
         return lines
 
     def get_linenos_style_defs(self):
-        lines = [
+        return [
             'pre { %s }' % self._pre_style,
             'td.linenos .normal { %s }' % self._linenos_style,
             'span.linenos { %s }' % self._linenos_style,
@@ -569,22 +566,16 @@ class HtmlFormatter(Formatter):
             'span.linenos.special { %s }' % self._linenos_special_style,
         ]
 
-        return lines
-
     def get_css_prefix(self, arg):
         if arg is None:
-            arg = ('cssclass' in self.options and '.'+self.cssclass or '')
-        if isinstance(arg, str):
-            args = [arg]
-        else:
-            args = list(arg)
-
+            arg = 'cssclass' in self.options and f'.{self.cssclass}' or ''
+        args = [arg] if isinstance(arg, str) else list(arg)
         def prefix(cls):
             if cls:
-                cls = '.' + cls
+                cls = f'.{cls}'
             tmp = []
             for arg in args:
-                tmp.append((arg and arg + ' ' or '') + cls)
+                tmp.append((arg and f'{arg} ' or '') + cls)
             return ', '.join(tmp)
 
         return prefix
@@ -595,23 +586,15 @@ class HtmlFormatter(Formatter):
 
     @property
     def _linenos_style(self):
-        return 'color: %s; background-color: %s; padding-left: 5px; padding-right: 5px;' % (
-            self.style.line_number_color,
-            self.style.line_number_background_color
-        )
+        return f'color: {self.style.line_number_color}; background-color: {self.style.line_number_background_color}; padding-left: 5px; padding-right: 5px;'
 
     @property
     def _linenos_special_style(self):
-        return 'color: %s; background-color: %s; padding-left: 5px; padding-right: 5px;' % (
-            self.style.line_number_special_color,
-            self.style.line_number_special_background_color
-        )
+        return f'color: {self.style.line_number_special_color}; background-color: {self.style.line_number_special_background_color}; padding-left: 5px; padding-right: 5px;'
 
     def _decodeifneeded(self, value):
         if isinstance(value, bytes):
-            if self.encoding:
-                return value.decode(self.encoding)
-            return value.decode()
+            return value.decode(self.encoding) if self.encoding else value.decode()
         return value
 
     def _wrap_full(self, inner, outfile):
@@ -639,7 +622,7 @@ class HtmlFormatter(Formatter):
                         cf.write(CSSFILE_TEMPLATE %
                                  {'styledefs': self.get_style_defs('body')})
             except OSError as err:
-                err.strerror = 'Error writing CSS file: ' + err.strerror
+                err.strerror = f'Error writing CSS file: {err.strerror}'
                 raise
 
             yield 0, (DOC_HEADER_EXTERNALCSS %
@@ -685,38 +668,34 @@ class HtmlFormatter(Formatter):
                 line = ' ' * mw
 
             if nocls:
-                if special_line:
-                    style = ' style="%s"' % self._linenos_special_style
-                else:
-                    style = ' style="%s"' % self._linenos_style
+                style = (
+                    f' style="{self._linenos_special_style}"'
+                    if special_line
+                    else f' style="{self._linenos_style}"'
+                )
+            elif special_line:
+                style = ' class="special"'
             else:
-                if special_line:
-                    style = ' class="special"'
-                else:
-                    style = ' class="normal"'
+                style = ' class="normal"'
 
             if style:
-                line = '<span%s>%s</span>' % (style, line)
+                line = f'<span{style}>{line}</span>'
 
             lines.append(line)
 
         ls = '\n'.join(lines)
 
-        # If a filename was specified, we can't put it into the code table as it
-        # would misalign the line numbers. Hence we emit a separate row for it.
-        filename_tr = ""
         if self.filename:
-            filename_tr = (
-                '<tr><th colspan="2" class="filename">'
-                '<span class="filename">' + self.filename + '</span>'
-                '</th></tr>')
-
+            filename_tr = f'<tr><th colspan="2" class="filename"><span class="filename">{self.filename}</span></th></tr>'
+        else:
+            filename_tr = ""
         # in case you wonder about the seemingly redundant <div> here: since the
         # content in the other cell also is wrapped in a div, some browsers in
         # some configurations seem to mess up the formatting...
-        yield 0, (f'<table class="{self.cssclass}table">' + filename_tr +
-            '<tr><td class="linenos"><div class="linenodiv"><pre>' +
-            ls + '</pre></div></td><td class="code">')
+        yield (
+            0,
+            f'<table class="{self.cssclass}table">{filename_tr}<tr><td class="linenos"><div class="linenodiv"><pre>{ls}</pre></div></td><td class="code">',
+        )
         yield 0, '<div>'
         yield 0, dummyoutfile.getvalue()
         yield 0, '</div>'
@@ -738,27 +717,19 @@ class HtmlFormatter(Formatter):
             print_line = num % st == 0
             special_line = sp and num % sp == 0
 
-            if print_line:
-                line = '%*d' % (mw, num)
-            else:
-                line = ' ' * mw
-
+            line = '%*d' % (mw, num) if print_line else ' ' * mw
             if nocls:
-                if special_line:
-                    style = ' style="%s"' % self._linenos_special_style
-                else:
-                    style = ' style="%s"' % self._linenos_style
+                style = (
+                    f' style="{self._linenos_special_style}"'
+                    if special_line
+                    else f' style="{self._linenos_style}"'
+                )
+            elif special_line:
+                style = ' class="linenos special"'
             else:
-                if special_line:
-                    style = ' class="linenos special"'
-                else:
-                    style = ' class="linenos"'
+                style = ' class="linenos"'
 
-            if style:
-                linenos = '<span%s>%s</span>' % (style, line)
-            else:
-                linenos = line
-
+            linenos = f'<span{style}>{line}</span>' if style else line
             if aln:
                 yield 1, ('<a href="#%s-%d">%s</a>' % (anchor_name, num, linenos) +
                           inner_line)
@@ -792,13 +763,22 @@ class HtmlFormatter(Formatter):
         style = []
         if (self.noclasses and not self.nobackground and
                 self.style.background_color is not None):
-            style.append('background: %s' % (self.style.background_color,))
+            style.append(f'background: {self.style.background_color}')
         if self.cssstyles:
             style.append(self.cssstyles)
         style = '; '.join(style)
 
-        yield 0, ('<div' + (self.cssclass and ' class="%s"' % self.cssclass) +
-                  (style and (' style="%s"' % style)) + '>')
+        yield (
+            0,
+            (
+                (
+                    '<div'
+                    + (self.cssclass and f' class="{self.cssclass}"')
+                    + (style and f' style="{style}"')
+                )
+                + '>'
+            ),
+        )
         yield from inner
         yield 0, '</div>\n'
 
@@ -811,11 +791,11 @@ class HtmlFormatter(Formatter):
         style = '; '.join(style)
 
         if self.filename and self.linenos != 1:
-            yield 0, ('<span class="filename">' + self.filename + '</span>')
+            yield (0, f'<span class="filename">{self.filename}</span>')
 
         # the empty span here is to keep leading empty lines from being
         # ignored by HTML parsers
-        yield 0, ('<pre' + (style and ' style="%s"' % style) + '><span></span>')
+        yield (0, '<pre' + (style and f' style="{style}"') + '><span></span>')
         yield from inner
         yield 0, '</pre>'
 
@@ -844,20 +824,19 @@ class HtmlFormatter(Formatter):
             try:
                 cspan = self.span_element_openers[ttype]
             except KeyError:
-                title = ' title="%s"' % '.'.join(ttype) if self.debug_token_types else ''
-                if nocls:
-                    css_style = self._get_css_inline_styles(ttype)
-                    if css_style:
-                        css_style = self.class2style[css_style][0]
-                        cspan = '<span style="%s"%s>' % (css_style, title)
-                    else:
-                        cspan = ''
+                title = f""" title="{'.'.join(ttype)}\"""" if self.debug_token_types else ''
+                if nocls and (css_style := self._get_css_inline_styles(ttype)):
+                    css_style = self.class2style[css_style][0]
+                    cspan = f'<span style="{css_style}"{title}>'
+                elif (
+                    nocls
+                    and not (css_style := self._get_css_inline_styles(ttype))
+                    or not nocls
+                    and not (css_class := self._get_css_classes(ttype))
+                ):
+                    cspan = ''
                 else:
-                    css_class = self._get_css_classes(ttype)
-                    if css_class:
-                        cspan = '<span class="%s"%s>' % (css_class, title)
-                    else:
-                        cspan = ''
+                    cspan = f'<span class="{css_class}"{title}>'
                 self.span_element_openers[ttype] = cspan
 
             parts = self._translate_parts(value)
@@ -872,8 +851,8 @@ class HtmlFormatter(Formatter):
                     url = self.tagurlformat % {'path': base, 'fname': filename,
                                                'fext': extension}
                     parts[0] = "<a href=\"%s#%s-%d\">%s" % \
-                        (url, self.lineanchors, linenumber, parts[0])
-                    parts[-1] = parts[-1] + "</a>"
+                            (url, self.lineanchors, linenumber, parts[0])
+                    parts[-1] = f"{parts[-1]}</a>"
 
             # for all but the last line
             for part in parts[:-1]:
@@ -899,7 +878,7 @@ class HtmlFormatter(Formatter):
             elif parts[-1]:
                 line = [cspan, parts[-1]]
                 lspan = cspan
-            # else we neither have to open a new span nor set lspan
+                # else we neither have to open a new span nor set lspan
 
         if line:
             line.extend(((lspan and '</span>'), lsep))
@@ -926,11 +905,10 @@ class HtmlFormatter(Formatter):
                 if self.noclasses:
                     style = ''
                     if self.style.highlight_color is not None:
-                        style = (' style="background-color: %s"' %
-                                 (self.style.highlight_color,))
-                    yield 1, '<span%s>%s</span>' % (style, value)
+                        style = f' style="background-color: {self.style.highlight_color}"'
+                    yield (1, f'<span{style}>{value}</span>')
                 else:
-                    yield 1, '<span class="hll">%s</span>' % value
+                    yield (1, f'<span class="hll">{value}</span>')
             else:
                 yield 1, value
 

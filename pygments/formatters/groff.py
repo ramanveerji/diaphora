@@ -79,13 +79,9 @@ class GroffFormatter(Formatter):
 
 
     def _define_colors(self, outfile):
-        colors = set()
-        for _, ndef in self.style:
-            if ndef['color'] is not None:
-                colors.add(ndef['color'])
-
+        colors = {ndef['color'] for _, ndef in self.style if ndef['color'] is not None}
         for color in colors:
-            outfile.write('.defcolor ' + color + ' rgb #' + color + '\n')
+            outfile.write(f'.defcolor {color} rgb #{color}' + '\n')
 
 
     def _write_lineno(self, outfile):
@@ -162,9 +158,7 @@ class GroffFormatter(Formatter):
                 if line.endswith('\n'):
                     if self.linenos:
                         self._write_lineno(outfile)
-                        self._linelen = 0
                     else:
                         outfile.write('\n')
-                        self._linelen = 0
-
+                    self._linelen = 0
         outfile.write('\n.fi')

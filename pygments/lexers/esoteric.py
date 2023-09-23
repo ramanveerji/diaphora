@@ -47,18 +47,18 @@ class BrainfuckLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """It's safe to assume that a program which mostly consists of + -
         and < > is brainfuck."""
         plus_minus_count = 0
         greater_less_count = 0
 
-        range_to_check = max(256, len(text))
+        range_to_check = max(256, len(self))
 
-        for c in text[:range_to_check]:
-            if c == '+' or c == '-':
+        for c in self[:range_to_check]:
+            if c in ['+', '-']:
                 plus_minus_count += 1
-            if c == '<' or c == '>':
+            if c in ['<', '>']:
                 greater_less_count += 1
 
         if plus_minus_count > (0.25 * range_to_check):
@@ -67,7 +67,7 @@ class BrainfuckLexer(RegexLexer):
             return 1.0
 
         result = 0
-        if '[-]' in text:
+        if '[-]' in self:
             result += 0.5
 
         return result

@@ -273,13 +273,13 @@ class IDLLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """endelse seems to be unique to IDL, endswitch is rare at least."""
         result = 0
 
-        if 'endelse' in text:
+        if 'endelse' in self:
             result += 0.2
-        if 'endswitch' in text:
+        if 'endswitch' in self:
             result += 0.01
 
         return result

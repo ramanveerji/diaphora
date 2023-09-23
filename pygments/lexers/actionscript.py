@@ -109,7 +109,7 @@ class ActionScriptLexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         """This is only used to disambiguate between ActionScript and
         ActionScript3. We return 0 here; the ActionScript3 lexer will match
         AS3 variable definitions and that will hopefully suffice."""
@@ -195,10 +195,8 @@ class ActionScript3Lexer(RegexLexer):
         ]
     }
 
-    def analyse_text(text):
-        if re.match(r'\w+\s*:\s*\w', text):
-            return 0.3
-        return 0
+    def analyse_text(self):
+        return 0.3 if re.match(r'\w+\s*:\s*\w', self) else 0
 
 
 class MxmlLexer(RegexLexer):

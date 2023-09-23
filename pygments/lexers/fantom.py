@@ -30,8 +30,8 @@ class FantomLexer(RegexLexer):
     mimetypes = ['application/x-fantom']
 
     # often used regexes
-    def s(str):
-        return Template(str).substitute(
+    def s(self):
+        return Template(self).substitute(
             dict(
                 pod=r'[\"\w\.]+',
                 eos=r'\n|;',

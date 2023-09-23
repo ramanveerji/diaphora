@@ -78,9 +78,9 @@ class LimboLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         # Any limbo module implements something
-        if re.search(r'^implement \w+;', text, re.MULTILINE):
+        if re.search(r'^implement \w+;', self, re.MULTILINE):
             return 0.7
 
 # TODO:

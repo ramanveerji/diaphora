@@ -105,21 +105,29 @@ class SmaliLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         score = 0
-        if re.search(r'^\s*\.class\s', text, re.MULTILINE):
+        if re.search(r'^\s*\.class\s', self, re.MULTILINE):
             score += 0.5
-            if re.search(r'\b((check-cast|instance-of|throw-verification-error'
-                         r')\b|(-to|add|[ais]get|[ais]put|and|cmpl|const|div|'
-                         r'if|invoke|move|mul|neg|not|or|rem|return|rsub|shl|'
-                         r'shr|sub|ushr)[-/])|{|}', text, re.MULTILINE):
+            if re.search(
+                r'\b((check-cast|instance-of|throw-verification-error'
+                r')\b|(-to|add|[ais]get|[ais]put|and|cmpl|const|div|'
+                r'if|invoke|move|mul|neg|not|or|rem|return|rsub|shl|'
+                r'shr|sub|ushr)[-/])|{|}',
+                self,
+                re.MULTILINE,
+            ):
                 score += 0.3
-        if re.search(r'(\.(catchall|epilogue|restart local|prologue)|'
-                     r'\b(array-data|class-change-error|declared-synchronized|'
-                     r'(field|inline|vtable)@0x[0-9a-fA-F]|generic-error|'
-                     r'illegal-class-access|illegal-field-access|'
-                     r'illegal-method-access|instantiation-error|no-error|'
-                     r'no-such-class|no-such-field|no-such-method|'
-                     r'packed-switch|sparse-switch))\b', text, re.MULTILINE):
+        if re.search(
+            r'(\.(catchall|epilogue|restart local|prologue)|'
+            r'\b(array-data|class-change-error|declared-synchronized|'
+            r'(field|inline|vtable)@0x[0-9a-fA-F]|generic-error|'
+            r'illegal-class-access|illegal-field-access|'
+            r'illegal-method-access|instantiation-error|no-error|'
+            r'no-such-class|no-such-field|no-such-method|'
+            r'packed-switch|sparse-switch))\b',
+            self,
+            re.MULTILINE,
+        ):
             score += 0.6
         return score

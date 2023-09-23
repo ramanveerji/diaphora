@@ -34,20 +34,16 @@ class GDScriptLexer(RegexLexer):
     filenames = ["*.gd"]
     mimetypes = ["text/x-gdscript", "application/x-gdscript"]
 
-    def innerstring_rules(ttype):
+    def innerstring_rules(self):
         return [
-            # the old style '%s' % (...) string formatting
             (
                 r"%(\(\w+\))?[-#0 +]*([0-9]+|[*])?(\.([0-9]+|[*]))?"
                 "[hlL]?[E-GXc-giorsux%]",
                 String.Interpol,
             ),
-            # backslashes, quotes and formatting signs must be parsed one at a time
-            (r'[^\\\'"%\n]+', ttype),
-            (r'[\'"\\]', ttype),
-            # unhandled string formatting sign
-            (r"%", ttype),
-            # newlines are an error (use "nl" state)
+            (r'[^\\\'"%\n]+', self),
+            (r'[\'"\\]', self),
+            (r"%", self),
         ]
 
     tokens = {
@@ -327,21 +323,20 @@ class GDScriptLexer(RegexLexer):
         ],
     }
 
-    def analyse_text(text):
+    def analyse_text(self):
         score = 0.0
 
         if re.search(
-            r"func (_ready|_init|_input|_process|_unhandled_input)", text
+            r"func (_ready|_init|_input|_process|_unhandled_input)", self
         ):
             score += 0.8
 
         if re.search(
-            r"(extends |class_name |onready |preload|load|setget|func [^_])",
-            text
+            r"(extends |class_name |onready |preload|load|setget|func [^_])", self
         ):
             score += 0.4
 
-        if re.search(r"(var|const|enum|export|signal|tool)", text):
+        if re.search(r"(var|const|enum|export|signal|tool)", self):
             score += 0.2
 
         return min(score, 1.0)

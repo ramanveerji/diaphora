@@ -3270,8 +3270,7 @@ if __name__ == '__main__':  # pragma: no cover
             with open(file) as f:
                 for line in f:
                     if not module:
-                        search = module_re.search(line)
-                        if search:
+                        if search := module_re.search(line):
                             module = search.group(1)
                             modules[module] = []
 
@@ -3279,8 +3278,8 @@ if __name__ == '__main__':  # pragma: no cover
                         for match in function_re.finditer(line):
                             fn = match.group(1)
                             if '»' not in fn and '«' not in fn and \
-                               '::' not in fn and '\\' not in fn and \
-                               fn not in modules[module]:
+                                   '::' not in fn and '\\' not in fn and \
+                                   fn not in modules[module]:
                                 modules[module].append(fn)
 
             if module:
@@ -3299,7 +3298,7 @@ if __name__ == '__main__':  # pragma: no cover
         download = urlretrieve(PHP_MANUAL_URL)
         with tarfile.open(download[0]) as tar:
             tar.extractall()
-        yield from glob.glob("%s%s" % (PHP_MANUAL_DIR, PHP_REFERENCE_GLOB))
+        yield from glob.glob(f"{PHP_MANUAL_DIR}{PHP_REFERENCE_GLOB}")
         os.remove(download[0])
 
     def regenerate(filename, modules):

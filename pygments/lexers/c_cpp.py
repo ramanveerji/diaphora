@@ -297,10 +297,10 @@ class CLexer(CFamilyLexer):
         ]
     }
 
-    def analyse_text(text):
-        if re.search(r'^\s*#include [<"]', text, re.MULTILINE):
+    def analyse_text(self):
+        if re.search(r'^\s*#include [<"]', self, re.MULTILINE):
             return 0.1
-        if re.search(r'^\s*#ifn?def ', text, re.MULTILINE):
+        if re.search(r'^\s*#ifn?def ', self, re.MULTILINE):
             return 0.1
 
 
@@ -390,8 +390,8 @@ class CppLexer(CFamilyLexer):
         ]
     }
 
-    def analyse_text(text):
-        if re.search('#include <[a-z_]+>', text):
+    def analyse_text(self):
+        if re.search('#include <[a-z_]+>', self):
             return 0.2
-        if re.search('using namespace ', text):
+        if re.search('using namespace ', self):
             return 0.4

@@ -60,12 +60,12 @@ def map_parse(f,mlist):
 		if (not line.startswith(" .text") or (len(line) < 17)):
 			line = f.readline()
 			continue
-		#line wrap case	
-		if not ((line[16] == '0') and (line[17] == 'x')):
+		#line wrap case
+		if line[16] != '0' or line[17] != 'x':
 			seg = line.strip()
 			line = f.readline()
 		else:
-			seg = line[0:15].strip()
+			seg = line[:15].strip()
 		offset = int(line[16:34],16)
 		mlen = int(line[35:45].strip(),16)
 		name = line[46:].strip()
@@ -80,27 +80,26 @@ def map_parse(f,mlist):
 
 		#print "Seg: %s Offset: %x Len: %x Name: %s" % (seg,offset,mlen,name)
 		if (name == prev_name):
+			new_reach = offset+mlen
 			#print "Combining"
 			if (mlist == 1):
-				new_reach = offset+mlen
 				begin = g_mod_list1[-1].offset
 				new_len = new_reach-begin
 				g_mod_list1[-1].mlen = new_len
 				g_mod_list1[-1].reach = new_reach
 			else:
-				new_reach = offset+mlen
 				begin = g_mod_list2[-1].offset
 				new_len = new_reach-begin
 				g_mod_list2[-1].mlen = new_len
 				g_mod_list2[-1].reach = new_reach
-			#print "Seg: %s Offset: %x Len: %x Name: %s" % (seg,begin,new_len,name)
+					#print "Seg: %s Offset: %x Len: %x Name: %s" % (seg,begin,new_len,name)
 		else:	
 			bm = bin_mod(name,offset,mlen)
 			if (mlist == 1):
 				g_mod_list1.append(bm)
 			else:
 				g_mod_list2.append(bm)
-			
+
 		#read next line
 		line = f.readline()
 		prev_name = name			
@@ -145,7 +144,7 @@ def mod_underlap(m1,m2):
 #Return a module object that is the combination of the two modules
 #Does not update either of the global module lists
 def mod_collapse(m1,m2):
-	nname = m1.name + "_and_" + m2.name
+	nname = f"{m1.name}_and_{m2.name}"
 	noffset = min(m1.offset,m2.offset)
 	nr = max(m1.reach,m2.reach)
 	nlen = nr - noffset
@@ -157,7 +156,7 @@ def mod_collapse(m1,m2):
 	#will work regardless of module order, 
 	#the correct one will be positive, the wrong one negative
 	cm.gap += max(m2.offset - m1.reach, m1.offset - m2.reach)
-	
+
 	return cm
 
 #mod_print(m):
@@ -322,22 +321,21 @@ def map_reconcile():
 	
 			
 #"ground truth" map file
-f = open(sys.argv[1], 'r')
-map_parse(f,1)
-#map file to compare
-f2 = open(sys.argv[2], 'r')
-map_parse(f2,2)
+with open(sys.argv[1], 'r') as f:
+	map_parse(f,1)
+	#map file to compare
+	f2 = open(sys.argv[2], 'r')
+	map_parse(f2,2)
 
-map_print(1)
-map_print(2)
+	map_print(1)
+	map_print(2)
 
-#"Reconcile" maps to make them more similar - see comment above for why we do this
-map_reconcile()
+	#"Reconcile" maps to make them more similar - see comment above for why we do this
+	map_reconcile()
 
-#Print reconciled map
-rec_list_print()
+	#Print reconciled map
+	rec_list_print()
 
-#Print score
-print("Score: %f" % (final_score()))
-f.close()
+	#Print score
+	print("Score: %f" % (final_score()))
 f2.close()

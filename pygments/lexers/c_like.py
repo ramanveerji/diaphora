@@ -373,12 +373,12 @@ class SwigLexer(CppLexer):
         '%trackobjects', '%types', '%unrefobject', '%varargs', '%warn',
         '%warnfilter'}
 
-    def analyse_text(text):
+    def analyse_text(self):
         rv = 0
         # Search for SWIG directives, which are conventionally at the beginning of
         # a line. The probability of them being within a line is low, so let another
         # lexer win in this case.
-        matches = re.findall(r'^\s*(%[a-z_][a-z0-9_]*)', text, re.M)
+        matches = re.findall(r'^\s*(%[a-z_][a-z0-9_]*)', self, re.M)
         for m in matches:
             if m in SwigLexer.swig_directives:
                 rv = 0.98
@@ -571,6 +571,8 @@ class CharmciLexer(CppLexer):
     }
 
 
+
+
 class OmgIdlLexer(CLexer):
     """
     Lexer for Object Management Group Interface Definition Language.
@@ -590,10 +592,18 @@ class OmgIdlLexer(CLexer):
         'values': [
             (words(('true', 'false'), prefix=r'(?i)', suffix=r'\b'), Number),
             (r'([Ll]?)(")', bygroups(String.Affix, String.Double), 'string'),
-            (r'([Ll]?)(\')(\\[^\']+)(\')',
-                bygroups(String.Affix, String.Char, String.Escape, String.Char)),
-            (r'([Ll]?)(\')(\\\')(\')',
-                bygroups(String.Affix, String.Char, String.Escape, String.Char)),
+            (
+                r'([Ll]?)(\')(\\[^\']+)(\')',
+                bygroups(
+                    String.Affix, String.Char, String.Escape, String.Char
+                ),
+            ),
+            (
+                r'([Ll]?)(\')(\\\')(\')',
+                bygroups(
+                    String.Affix, String.Char, String.Escape, String.Char
+                ),
+            ),
             (r'([Ll]?)(\'.\')', bygroups(String.Affix, String.Char)),
             (r'[+-]?\d+(\.\d*)?[Ee][+-]?\d+', Number.Float),
             (r'[+-]?(\d+\.\d*)|(\d*\.\d+)([Ee][+-]?\d+)?', Number.Float),
@@ -618,7 +628,7 @@ class OmgIdlLexer(CLexer):
             default('#pop'),
         ],
         'annotation_appl': [
-            (r'@' + scoped_name, Name.Decorator, 'annotation_params_maybe'),
+            (f'@{scoped_name}', Name.Decorator, 'annotation_params_maybe')
         ],
         'enum': [
             include('whitespace'),
@@ -629,34 +639,130 @@ class OmgIdlLexer(CLexer):
         ],
         'root': [
             include('whitespace'),
-            (words((
-                'typedef', 'const',
-                'in', 'out', 'inout', 'local',
-            ), prefix=r'(?i)', suffix=r'\b'), Keyword.Declaration),
-            (words((
-                'void', 'any', 'native', 'bitfield',
-                'unsigned', 'boolean', 'char', 'wchar', 'octet', 'short', 'long',
-                'int8', 'uint8', 'int16', 'int32', 'int64', 'uint16', 'uint32', 'uint64',
-                'float', 'double', 'fixed',
-                'sequence', 'string', 'wstring', 'map',
-            ), prefix=r'(?i)', suffix=r'\b'), Keyword.Type),
-            (words((
-                '@annotation', 'struct', 'union', 'bitset', 'interface',
-                'exception', 'valuetype', 'eventtype', 'component',
-            ), prefix=r'(?i)', suffix=r'(\s+)(\w+)'), bygroups(Keyword, Whitespace, Name.Class)),
-            (words((
-                'abstract', 'alias', 'attribute', 'case', 'connector',
-                'consumes', 'context', 'custom', 'default', 'emits', 'factory',
-                'finder', 'getraises', 'home', 'import', 'manages', 'mirrorport',
-                'multiple', 'Object', 'oneway', 'primarykey', 'private', 'port',
-                'porttype', 'provides', 'public', 'publishes', 'raises',
-                'readonly', 'setraises', 'supports', 'switch', 'truncatable',
-                'typeid', 'typename', 'typeprefix', 'uses', 'ValueBase',
-            ), prefix=r'(?i)', suffix=r'\b'), Keyword),
-            (r'(?i)(enum|bitmask)(\s+)(\w+)',
-                bygroups(Keyword, Whitespace, Name.Class), 'enum'),
-            (r'(?i)(module)(\s+)(\w+)',
-                bygroups(Keyword.Namespace, Whitespace, Name.Namespace)),
+            (
+                words(
+                    (
+                        'typedef',
+                        'const',
+                        'in',
+                        'out',
+                        'inout',
+                        'local',
+                    ),
+                    prefix=r'(?i)',
+                    suffix=r'\b',
+                ),
+                Keyword.Declaration,
+            ),
+            (
+                words(
+                    (
+                        'void',
+                        'any',
+                        'native',
+                        'bitfield',
+                        'unsigned',
+                        'boolean',
+                        'char',
+                        'wchar',
+                        'octet',
+                        'short',
+                        'long',
+                        'int8',
+                        'uint8',
+                        'int16',
+                        'int32',
+                        'int64',
+                        'uint16',
+                        'uint32',
+                        'uint64',
+                        'float',
+                        'double',
+                        'fixed',
+                        'sequence',
+                        'string',
+                        'wstring',
+                        'map',
+                    ),
+                    prefix=r'(?i)',
+                    suffix=r'\b',
+                ),
+                Keyword.Type,
+            ),
+            (
+                words(
+                    (
+                        '@annotation',
+                        'struct',
+                        'union',
+                        'bitset',
+                        'interface',
+                        'exception',
+                        'valuetype',
+                        'eventtype',
+                        'component',
+                    ),
+                    prefix=r'(?i)',
+                    suffix=r'(\s+)(\w+)',
+                ),
+                bygroups(Keyword, Whitespace, Name.Class),
+            ),
+            (
+                words(
+                    (
+                        'abstract',
+                        'alias',
+                        'attribute',
+                        'case',
+                        'connector',
+                        'consumes',
+                        'context',
+                        'custom',
+                        'default',
+                        'emits',
+                        'factory',
+                        'finder',
+                        'getraises',
+                        'home',
+                        'import',
+                        'manages',
+                        'mirrorport',
+                        'multiple',
+                        'Object',
+                        'oneway',
+                        'primarykey',
+                        'private',
+                        'port',
+                        'porttype',
+                        'provides',
+                        'public',
+                        'publishes',
+                        'raises',
+                        'readonly',
+                        'setraises',
+                        'supports',
+                        'switch',
+                        'truncatable',
+                        'typeid',
+                        'typename',
+                        'typeprefix',
+                        'uses',
+                        'ValueBase',
+                    ),
+                    prefix=r'(?i)',
+                    suffix=r'\b',
+                ),
+                Keyword,
+            ),
+            (
+                r'(?i)(enum|bitmask)(\s+)(\w+)',
+                bygroups(Keyword, Whitespace, Name.Class),
+                'enum',
+            ),
+            (
+                r'(?i)(module)(\s+)(\w+)',
+                bygroups(Keyword.Namespace, Whitespace, Name.Namespace),
+            ),
             (r'(\w+)(\s*)(=)', bygroups(Name.Constant, Whitespace, Operator)),
             (r'[\(\)]', Punctuation),
             include('values'),
